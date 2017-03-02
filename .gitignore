@@ -1,3 +1,15 @@
+#directories
+build
+dist
+orig
+
+#general
+.*
+!.gitignore
+*.jpeg
+*.dot
+MvLtlProject
+
 # Compiled Object files
 *.slo
 *.lo

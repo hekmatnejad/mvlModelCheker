@@ -1,0 +1,1 @@
+modelcheck: modelcheck.cpp
