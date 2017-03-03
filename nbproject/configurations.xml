@@ -57,10 +57,6 @@ Contributor(s):
       <itemPath>Util.cpp</itemPath>
       <itemPath>main.cpp</itemPath>
     </logicalFolder>
-    <logicalFolder name="f1" displayName="Tests" projectFiles="true" kind="ROOT">
-      <itemPath>TestMain.cpp</itemPath>
-      <itemPath>TestSuite.cpp</itemPath>
-    </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
                    projectFiles="false">
@@ -89,19 +85,12 @@ Contributor(s):
         <linkerTool>
           <output>${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/mvltlproject</output>
           <commandlineTool>g++</commandlineTool>
-          <linkerLibItems>
-            <linkerOptionItem>`pkg-config --libs cpputest`</linkerOptionItem>
-          </linkerLibItems>
-          <commandLine>-lspot -lbddx -lspotltsmin</commandLine>
+          <commandLine>-lspot -lbddx</commandLine>
         </linkerTool>
       </compileType>
       <item path="MvLtlModel.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="MvLtlModel.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="TestMain.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="TestSuite.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="Util.cpp" ex="false" tool="1" flavor2="0">
       </item>
@@ -142,10 +131,6 @@ Contributor(s):
       <item path="MvLtlModel.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="MvLtlModel.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="TestMain.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="TestSuite.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="Util.cpp" ex="false" tool="1" flavor2="0">
       </item>

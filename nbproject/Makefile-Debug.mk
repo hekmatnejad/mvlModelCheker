@@ -36,8 +36,6 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 # Object Files
 OBJECTFILES= \
 	${OBJECTDIR}/MvLtlModel.o \
-	${OBJECTDIR}/TestMain.o \
-	${OBJECTDIR}/TestSuite.o \
 	${OBJECTDIR}/Util.o \
 	${OBJECTDIR}/main.o
 
@@ -56,7 +54,7 @@ FFLAGS=
 ASFLAGS=
 
 # Link Libraries and Options
-LDLIBSOPTIONS=`pkg-config --libs cpputest`  
+LDLIBSOPTIONS=
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}
@@ -64,32 +62,22 @@ LDLIBSOPTIONS=`pkg-config --libs cpputest`
 
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/mvltlproject: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	g++ -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/mvltlproject ${OBJECTFILES} ${LDLIBSOPTIONS} -lspot -lbddx -lspotltsmin
+	g++ -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/mvltlproject ${OBJECTFILES} ${LDLIBSOPTIONS} -lspot -lbddx
 
 ${OBJECTDIR}/MvLtlModel.o: MvLtlModel.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -g `pkg-config --cflags cpputest` -std=c++11  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/MvLtlModel.o MvLtlModel.cpp
-
-${OBJECTDIR}/TestMain.o: TestMain.cpp
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} "$@.d"
-	$(COMPILE.cc) -g `pkg-config --cflags cpputest` -std=c++11  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/TestMain.o TestMain.cpp
-
-${OBJECTDIR}/TestSuite.o: TestSuite.cpp
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} "$@.d"
-	$(COMPILE.cc) -g `pkg-config --cflags cpputest` -std=c++11  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/TestSuite.o TestSuite.cpp
+	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/MvLtlModel.o MvLtlModel.cpp
 
 ${OBJECTDIR}/Util.o: Util.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -g `pkg-config --cflags cpputest` -std=c++11  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Util.o Util.cpp
+	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Util.o Util.cpp
 
 ${OBJECTDIR}/main.o: main.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -g `pkg-config --cflags cpputest` -std=c++11  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/main.o main.cpp
+	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/main.o main.cpp
 
 # Subprojects
 .build-subprojects:

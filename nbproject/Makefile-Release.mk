@@ -36,8 +36,6 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 # Object Files
 OBJECTFILES= \
 	${OBJECTDIR}/MvLtlModel.o \
-	${OBJECTDIR}/TestMain.o \
-	${OBJECTDIR}/TestSuite.o \
 	${OBJECTDIR}/Util.o \
 	${OBJECTDIR}/main.o
 
@@ -60,26 +58,16 @@ LDLIBSOPTIONS=
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}
-	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/mvltlproject
+	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/mvlmodelcheker
 
-${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/mvltlproject: ${OBJECTFILES}
+${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/mvlmodelcheker: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	g++ -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/mvltlproject ${OBJECTFILES} ${LDLIBSOPTIONS} -lspot -lbddx
+	g++ -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/mvlmodelcheker ${OBJECTFILES} ${LDLIBSOPTIONS} -lspot -lbddx
 
 ${OBJECTDIR}/MvLtlModel.o: MvLtlModel.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.cc) -O2 -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/MvLtlModel.o MvLtlModel.cpp
-
-${OBJECTDIR}/TestMain.o: TestMain.cpp
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/TestMain.o TestMain.cpp
-
-${OBJECTDIR}/TestSuite.o: TestSuite.cpp
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/TestSuite.o TestSuite.cpp
 
 ${OBJECTDIR}/Util.o: Util.cpp
 	${MKDIR} -p ${OBJECTDIR}

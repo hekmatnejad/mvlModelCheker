@@ -16,12 +16,14 @@
 #include "MvLtlModel.h"
 #include "Util.h"
 
-#include <spot/twa/formula2bdd.hh>
+//#include <spot/twa/formula2bdd.hh>
 #include <spot/mv/version.hh>
-#include <spot/tl/dot.hh>
-#include <spot/taalgos/dot.hh>
+//#include <spot/tl/dot.hh>
+//#include <spot/taalgos/dot.hh>
 
 using namespace std;
+
+#define PRINT_DEBUG_DATA 1
 
 void model_1(string formula);
 void model_2(string formula);
@@ -117,7 +119,7 @@ int main(int argc, char** argv) {
 
     //model_1("F(w)");
     //mv_latice_test_1();
-    model_2("F(w & z)");
+    model_2("G (w & z)");
             
     
     cout << "done!\n";
@@ -474,9 +476,12 @@ void model_2(string formula){
       cout << "Input LTL formula is wrong!" << endl;
     return;
   }
+  cout << "trying...\n";
+  spot::twa_graph_ptr af = spot::translator(dict).run(pf.f);
+    cout << "hello\n";
 
   //kripke_graph_ptr kg = spot::make_kripke_graph(dict);
-  mv_kripke_graph_ptr kg = spot::make_mv_kripke_graph(dict);
+  mv_kripke_graph_ptr kg = spot::make_mv_kripke_graph(dict);//uses new kripke structure
   //auto kk = std::make_shared<demo_kripke>(dict);
   
    //spot::twa::prop_set ps_ = {true,false,false,false};//spot::twa::prop_set::all();
@@ -504,24 +509,24 @@ void model_2(string formula){
   kg->state_from_number(2)->cond(!w);
   kg->state_from_number(3)->cond(wm & z);
 
-  
+#if 0 
   stringstream os;
   spot::print_dot(os, kg, "k");
   stringstream ss = Util::readFromFile("model.dot");
   if(os.str()==ss.str())
-      cout << "YYYYYYYYYYYYYYYY\n" << os.str() << "\n" << ss.str();
-  //char * is = Util::readFromFile("model.dot");
-  //delete [] is;
+      cout << "YYYYYYYYYYYYYYYYESSSSS\n" << os.str() << "\n" << ss.str();
   return ;
-  
+#endif  
   Util::write2File("model.dot", kg, "k");
+#if PRINT_DEBUG_DATA
   cout << "========================\n";
+#endif
   //spot::print_dot(std::cout, kg, "k");
   
   
   // Translate its negation.
   //spot::formula f = spot::formula::Not(pf.f);
-  spot::twa_graph_ptr af = spot::translator(dict).run(pf.f);
+
   //spot::print_dot(std::cout, af);
   Util::write2File("formula.dot", af);
 
@@ -553,7 +558,9 @@ void model_2(string formula){
 
   Util::write2File("product.dot", p, "a");
 
-  if (auto run = p->accepting_run())
+//  if (auto run = p->accepting_run())
+  if (auto run = k->intersecting_run(af,false))
+//  if (auto run = k->intersects(af))
     {
       //run->project(k)->highlight(5); // 5 is a color number.
       ////spot::print_dot(std::cout, k);//, ".k");

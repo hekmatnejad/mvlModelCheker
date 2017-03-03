@@ -12,16 +12,16 @@ CND_ARTIFACT_DIR_Debug=dist/Debug/GNU-Linux
 CND_ARTIFACT_NAME_Debug=mvltlproject
 CND_ARTIFACT_PATH_Debug=dist/Debug/GNU-Linux/mvltlproject
 CND_PACKAGE_DIR_Debug=dist/Debug/GNU-Linux/package
-CND_PACKAGE_NAME_Debug=mvltlproject.tar
-CND_PACKAGE_PATH_Debug=dist/Debug/GNU-Linux/package/mvltlproject.tar
+CND_PACKAGE_NAME_Debug=mvlmodelcheker.tar
+CND_PACKAGE_PATH_Debug=dist/Debug/GNU-Linux/package/mvlmodelcheker.tar
 # Release configuration
 CND_PLATFORM_Release=GNU-Linux
 CND_ARTIFACT_DIR_Release=dist/Release/GNU-Linux
-CND_ARTIFACT_NAME_Release=mvltlproject
-CND_ARTIFACT_PATH_Release=dist/Release/GNU-Linux/mvltlproject
+CND_ARTIFACT_NAME_Release=mvlmodelcheker
+CND_ARTIFACT_PATH_Release=dist/Release/GNU-Linux/mvlmodelcheker
 CND_PACKAGE_DIR_Release=dist/Release/GNU-Linux/package
-CND_PACKAGE_NAME_Release=mvltlproject.tar
-CND_PACKAGE_PATH_Release=dist/Release/GNU-Linux/package/mvltlproject.tar
+CND_PACKAGE_NAME_Release=mvlmodelcheker.tar
+CND_PACKAGE_PATH_Release=dist/Release/GNU-Linux/package/mvlmodelcheker.tar
 #
 # include compiler specific variables
 #

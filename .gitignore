@@ -9,6 +9,7 @@ orig
 *.jpeg
 *.dot
 MvLtlProject
+*.sh
 
 # Compiled Object files
 *.slo
