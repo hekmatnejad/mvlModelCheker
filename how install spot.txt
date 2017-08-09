@@ -1,0 +1,13 @@
+<For developers only>
+First install all the dependency requirements (takes decades to install all of them): 
+https://gitlab.lrde.epita.fr/spot/spot/blob/next/HACKING
+Then run the following commands
+Git clone https://github.com/hekmatnejad/mvspot.git
+git checkout dev
+autoreconf -vfi
+./configure --prefix=/usr/local --enable-devel --enable-glibxx-debug --disable-dependency-tracking
+touch doc/stamp
+touch doc/org-stamp
+make V=0
+make install -i
+

@@ -37,7 +37,7 @@
 
 #include <spot/kripke/kripkegraph.hh>
 //#include "mvkripkegraph.h"
-
+#include <spot/parseaut/public.hh>
 
 using namespace std;
 using namespace spot;

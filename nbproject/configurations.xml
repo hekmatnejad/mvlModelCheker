@@ -43,6 +43,7 @@ Contributor(s):
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
+      <itemPath>ModelGenerator.h</itemPath>
       <itemPath>MvLtlModel.h</itemPath>
       <itemPath>Util.h</itemPath>
     </logicalFolder>
@@ -62,18 +63,18 @@ Contributor(s):
                    projectFiles="false">
       <itemPath>Makefile</itemPath>
     </logicalFolder>
+    <itemPath>ocean_triangulate.dot</itemPath>
   </logicalFolder>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
     <conf name="Debug" type="1">
       <toolsSet>
-        <compilerSet>default</compilerSet>
+        <compilerSet>GNU|GNU</compilerSet>
         <dependencyChecking>true</dependencyChecking>
         <rebuildPropChanged>false</rebuildPropChanged>
       </toolsSet>
       <compileType>
         <cTool>
-          <developmentMode>0</developmentMode>
           <standard>10</standard>
           <commandLine>-lspot -lbddx</commandLine>
         </cTool>
@@ -84,10 +85,18 @@ Contributor(s):
         </ccTool>
         <linkerTool>
           <output>${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/mvltlproject</output>
+          <linkerDynSerch>
+            <pElem>.</pElem>
+            <pElem>.</pElem>
+            <pElem>.</pElem>
+            <pElem>.</pElem>
+          </linkerDynSerch>
           <commandlineTool>g++</commandlineTool>
           <commandLine>-lspot -lbddx</commandLine>
         </linkerTool>
       </compileType>
+      <item path="ModelGenerator.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="MvLtlModel.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="MvLtlModel.h" ex="false" tool="3" flavor2="0">
@@ -97,6 +106,8 @@ Contributor(s):
       <item path="Util.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="ocean_triangulate.dot" ex="false" tool="3" flavor2="0">
       </item>
     </conf>
     <conf name="Release" type="1">
@@ -124,10 +135,18 @@ Contributor(s):
           <developmentMode>5</developmentMode>
         </asmTool>
         <linkerTool>
+          <linkerDynSerch>
+            <pElem>.</pElem>
+            <pElem>.</pElem>
+            <pElem>.</pElem>
+            <pElem>.</pElem>
+          </linkerDynSerch>
           <commandlineTool>g++</commandlineTool>
           <commandLine>-lspot -lbddx</commandLine>
         </linkerTool>
       </compileType>
+      <item path="ModelGenerator.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="MvLtlModel.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="MvLtlModel.h" ex="false" tool="3" flavor2="0">
@@ -137,6 +156,8 @@ Contributor(s):
       <item path="Util.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="ocean_triangulate.dot" ex="false" tool="3" flavor2="0">
       </item>
     </conf>
   </confs>

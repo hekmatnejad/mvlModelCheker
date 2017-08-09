@@ -89,19 +89,19 @@ build: .build-post
 .build-pre:
 # Add your pre 'build' code here...
 
-.build-post: .build-impl model.jpeg formula.jpeg product.jpeg accept.jpeg
+.build-post: .build-impl #model.jpeg formula.jpeg product.jpeg accept.jpeg
 # Add your post 'build' code here...
-model.jpeg : model.dot
-	dot -Tjpeg -o model.jpeg model.dot
+#model.jpeg : model.dot
+#	dot -Tjpeg -o model.jpeg model.dot
 	
-formula.jpeg : formula.dot
-	dot -Tjpeg -o formula.jpeg formula.dot
+#formula.jpeg : formula.dot
+#	dot -Tjpeg -o formula.jpeg formula.dot
 	
-product.jpeg : product.dot
-	dot -Tjpeg -o product.jpeg product.dot
+#product.jpeg : product.dot
+#	dot -Tjpeg -o product.jpeg product.dot
 
-accept.jpeg : accept.dot
-	dot -Tjpeg -o accept.jpeg accept.dot
+#accept.jpeg : accept.dot
+#	dot -Tjpeg -o accept.jpeg accept.dot
 
 
 # clean
