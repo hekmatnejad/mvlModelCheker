@@ -19,6 +19,7 @@
 
 //#include <spot/twa/formula2bdd.hh>
 #include <spot/mv/version.hh>
+#include <spot/taalgos/dot.hh>
 //#include <spot/tl/dot.hh>
 //#include <spot/taalgos/dot.hh>
 
@@ -127,6 +128,8 @@ int main(int argc, char** argv) {
     std::cout << model << std::endl;
     //generate a mock model and write it to a file for repetitive use
     //model_generator::generate_model("ocean_model.dot");
+    //if(true)return 0;
+
     srand (time(NULL));
     read_model_aut = Util::readAutFromFile("ocean_model.dot");
     if(!read_model_aut)
@@ -135,11 +138,14 @@ int main(int argc, char** argv) {
         exit(0);
     }
     spot::kripke_graph_ptr kg = read_model_aut->ks;
-    cout << (read_model_aut->errors.size());
-    //auto aut = spot::copy(read_model_aut->ks->shared_from_this(), { true, false, false, false }, true);
+    cout << (read_model_aut->errors.size())<<endl;
+    //std::list<parse_aut_error> el = read_model_aut->errors;
+    //cout<<">>>"<< (*el.begin()).second<<" -> " << (*el.begin()).first.end.filename<<endl;
+    auto aut = spot::copy(read_model_aut->aut->shared_from_this(), { true, false, false, false }, true);
+    spot::print_dot(std::cout, aut,"k");
+    if(true)return 0;
 
     //dfs(aut,bddtrue);
-    if(true)return 0;
     //findSat(bddtrue);
 
     //model_1("F(w)");

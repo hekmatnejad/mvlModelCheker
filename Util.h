@@ -31,10 +31,19 @@ static bool write2File(string fName, const const_twa_ptr& g, const char* options
     outFile.open(fName.c_str());
     if(!outFile.is_open())
         return false;
-    spot::print_dot(outFile, g);//, options);
+    spot::print_dot(outFile, g, options);
     outFile.close();
     return true;
+}
 
+static bool write2FileAsHoa(string fName, const const_twa_ptr& g, const char* options= nullptr){
+    std:ofstream outFile;
+    outFile.open(fName.c_str());
+    if(!outFile.is_open())
+        return false;
+    spot::print_hoa(outFile, g, options);
+    outFile.close();
+    return true;
 }
 
 static stringstream readFromFile(string fName){
@@ -58,8 +67,11 @@ static stringstream readFromFile(string fName){
 
 static spot::parsed_aut_ptr readAutFromFile(string fName){
     automaton_parser_options opt;
-    opt.want_kripke=true;
-    opt.ignore_abort=true;
+    opt.want_kripke=false;
+    opt.ignore_abort=false;
+    opt.debug=false;
+    opt.trust_hoa=true;
+    opt.raise_errors=false;
     spot::parsed_aut_ptr kg = spot::parse_aut(fName, spot::make_bdd_dict(),
                     spot::default_environment::instance(),opt);
     return kg;

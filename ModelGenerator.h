@@ -25,6 +25,8 @@ using namespace std;
 #include <spot/twa/twaproduct.hh>
 #include <spot/twaalgos/emptiness.hh>
 
+#include "Util.h"
+
 #define PRINT_DEBUG_DATA 1
 #define NUM_POSITIONS 8
 #define X_END 3
@@ -309,9 +311,9 @@ void generate_model(string model_name){
    //auto kk = std::make_shared<model_kripke>(spot::make_bdd_dict());
    //spot::print_dot(std::cout, kk);
    // Convert demo_kripke into an explicit graph
-   spot::twa_graph_ptr kg = spot::copy(std::make_shared<model_kripke>(spot::make_bdd_dict()),
-                                     spot::twa::prop_set::all(), true);    
-   Util::write2File(model_name, kg, "k");
+   spot::twa_graph_ptr kg = spot::copy(std::make_shared<model_kripke>
+           (spot::make_bdd_dict()),spot::twa::prop_set::all(), true);    
+   Util::write2FileAsHoa(model_name, kg, "k");
    cout << "model generated as: "<< model_name << endl;
 }
 }

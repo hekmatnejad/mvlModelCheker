@@ -54,7 +54,7 @@ FFLAGS=
 ASFLAGS=
 
 # Link Libraries and Options
-LDLIBSOPTIONS=
+LDLIBSOPTIONS=-Wl,-rpath,'.' -Wl,-rpath,'.' -Wl,-rpath,'.' -Wl,-rpath,'.'
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}
