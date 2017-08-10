@@ -89,11 +89,11 @@ struct node_compare {//comparator for sorting nodes based on least distance from
     }
 };
 void create_all_model_locations();
-model_node ** sorted_states_connected_to(unsigned state);
+model_node* * sorted_states_connected_to(unsigned state);
 int gloabl_size_of_connected_nodes[NUM_LOCATIONS];
-
- static spot::bdd_dict_ptr shared_dict = spot::make_bdd_dict();
- void testme();
+static int xy2number[Y_END+1][X_END+1];
+static model_node* * all_model_locations[NUM_LOCATIONS];
+static spot::bdd_dict_ptr shared_dict = spot::make_bdd_dict();
 /*
  * 
  */
@@ -106,11 +106,7 @@ int main(int argc, char** argv) {
     std::cout << model << std::endl;
     //generate a mock model and write it to a file for repetitive use
     //model_generator::generate_model("ocean_model.dot",shared_dict);
-    
-    create_all_model_locations();
-    get_state_number_from_xy();
-    testme();
-    if(true)return 0;
+    //if(true)return 0;
     srand (time(NULL));
     read_model_aut = Util::readAutFromFile("ocean_model.dot",false,shared_dict);
     if(!read_model_aut || read_model_aut->errors.size()>0)
@@ -129,54 +125,53 @@ int main(int argc, char** argv) {
     
     //spot::print_dot(std::cout, aut_model,"k");
     //if(true)return 0;
-
+    
     model_4("GF(odd_x) -> GF(odd_y)");
     
     cout << "done!\n";
     return 0;
 }
-void testme(){
-    
-}
+
+  int get_random(int low, int high)
+  {
+    return (int)(low + (float)rand()/RAND_MAX*(high-low));
+  }
+
 mutex size_mutex;
 //this function sorts the visiting graph nodes based on the given map and 
 //distance values toward the target
-model_node** sorted_states_connected_to(unsigned src){
+void create_all_model_locations(){
     auto& gr = aut_model->get_graph();
     unsigned edge;
-    unsigned dst;
-    
-    edge = gr.state_storage(src).succ;
-    std::set<model_node*, node_compare> around_nodes;
-    while(edge>0){
-        dst = gr.edge_storage(edge).dst;
-        float value = ((X_POS[dst]-X_END)*(X_POS[dst]-X_END)+(Y_POS[dst]-Y_END)*(Y_POS[dst]-Y_END));
-        model_node* node = new model_node(value,X_POS[dst],Y_POS[dst]);
-        around_nodes.insert(node);
-        std::cout<< "edge: " << edge << ", src: " << src << ", dst: " << dst << ", distance: " << node->GetValue() <<endl;
-        edge = gr.edge_storage(edge).next_succ;
+    unsigned dst;    
+    for(int src=0; src<NUM_LOCATIONS; src++){
+        edge = gr.state_storage(src).succ;
+        std::set<model_node*, node_compare> around_nodes;
+        while(edge>0){
+            dst = gr.edge_storage(edge).dst;
+            float value = ((X_POS[dst]-X_END)*(X_POS[dst]-X_END)+(Y_POS[dst]-Y_END)*(Y_POS[dst]-Y_END));
+            model_node* node = new model_node(value,X_POS[dst],Y_POS[dst]);
+            around_nodes.insert(node);
+            //std::cout<< "edge: " << edge << ", src: " << src << ", dst: " << dst << ", distance: " << node->GetValue() <<endl;
+            edge = gr.edge_storage(edge).next_succ;
+        }
+        //model_node* result[around_nodes.size()];
+        all_model_locations[src] = new model_node*[around_nodes.size()];
+        int cnt = 0;
+        for(std::set<model_node*>::iterator it = around_nodes.begin(); it!=around_nodes.end(); it++){
+            all_model_locations[src][cnt++] = new model_node(((model_node*)(* it))->GetValue(),((model_node*)(* it))->GetX(),
+                            ((model_node*)(* it))->GetY());
+            //cout<<"value: "<<all_model_locations[src][cnt-1]->GetValue()<<endl;
+        }
+        gloabl_size_of_connected_nodes[src] = around_nodes.size();
     }
-    model_node* result[around_nodes.size()];
-    //result = new model_node*[around_nodes.size()]();
-    int cnt = 0;
-    for(std::set<model_node*>::iterator it = around_nodes.begin(); it!=around_nodes.end(); it++){
-        //std:cout <<">>>"<< ((model_node*)(* it))->GetValue() << endl;
-        result[cnt++] = ((model_node*)(* it));
-    }
-    //std::lock_guard<std::mutex> lock(size_mutex);
-    //size_mutex.lock();
-    gloabl_size_of_connected_nodes[src] = around_nodes.size();
-    //size_mutex.unlock();
-    //note: do not forget to free memory after being done using this function
-    return result;
- }
-
-static int xy2number[Y_END+1][X_END+1];
-
-static model_node ** all_model_locations[NUM_LOCATIONS];
-void create_all_model_locations(){
-    for(int i=0; i<NUM_LOCATIONS; i++)
-        all_model_locations[i] = sorted_states_connected_to(i);
+    /*cout<<"------TEST-------\n\n";
+    for(int i=0; i<NUM_LOCATIONS; i++){
+        for(int j=0; j<gloabl_size_of_connected_nodes[i]; j++){
+            cout<<"("<<all_model_locations[i][j]->GetX()<<","<<all_model_locations[i][j]->GetY()<<")";
+        }
+        cout<<i<<endl;
+    }*/
 }
 
 void get_state_number_from_xy(){
@@ -185,7 +180,7 @@ void get_state_number_from_xy(){
             for(int m=0; m< NUM_LOCATIONS; m++){
                 if((int)X_POS[m]==i && (int)Y_POS[m]==j){
                     xy2number[i][j] = m;
-                    //std::cout << i <<" " << j << " " << m << endl;
+                    //std::cout << i <<" " << j << " state: " << m << endl;
                     break;
                 }
             }
@@ -234,11 +229,14 @@ private:
   float x_;
   float y_;    
   float time_ = 0;
+  //int num_pos_=0;
 
 public:
-  marine_robot_state(float x = 0, float y = 0, float time = 0)
-    : x_((int)x % (X_END+1)), y_((int)y % (Y_END+1)), time_(time)
+  marine_robot_state(float x = 0, float y = 0, float time = 0)//, int num_pos=0)
+    : x_((int)x % (X_END+1)), y_((int)y % (Y_END+1)), time_(time)//, num_pos_(num_pos)
   {
+    //num_pos_ = gloabl_size_of_connected_nodes[xy2number[(int)x_][(int)y_]];
+    //cout<< "size sorted_positions: " << num_pos_ << endl;
   }
 
   float get_x() const
@@ -255,6 +253,11 @@ public:
   {
       return time_;
   }
+  
+  //int get_num_pos() const
+  //{
+  //    return num_pos_;
+  //}
   
   marine_robot_state* clone() const override
   {
@@ -278,11 +281,6 @@ public:
   }
 };
 
-  int get_random(int low, int high)
-  {
-    return (int)(low + (float)rand()/RAND_MAX*(high-low));
-  }
-  
 class marine_robot_succ_iterator: public spot::kripke_succ_iterator
 {
 private:
@@ -290,19 +288,19 @@ private:
   float y_;
   float time_;
   unsigned char pos_;
-  int num_pos=0;
+  int num_pos_=0;
 public:
   marine_robot_succ_iterator(float x, float y, float time, bdd cond)
     : kripke_succ_iterator(cond), x_(x), y_(y), time_(time)
   {
-    num_pos = gloabl_size_of_connected_nodes[xy2number[(int)x_][(int)y_]];
-    cout<< "size sorted_positions: " << num_pos << endl;
+    num_pos_ = gloabl_size_of_connected_nodes[xy2number[(int)x_][(int)y_]];
+    //cout<< "size sorted_positions: <constructor>" << num_pos_ << endl;
   }
 
   bool first() override
   {
     if(x_==X_TARGET && y_==Y_TARGET){
-        pos_=num_pos;
+        pos_ = 0;
         return true;
     }
     if(time_==(MAX_RUN_TIME-1))
@@ -318,15 +316,15 @@ public:
     
     pos_++;
     if(x_==X_TARGET && y_==Y_TARGET){
-        pos_=num_pos;
+        pos_=num_pos_;
         return false;
     }
-    return (pos_ < num_pos);          // More successors?
+    return (pos_ < num_pos_);          // More successors?
   }
 
   bool done() const override
   {
-    return pos_ == num_pos || time_==(MAX_RUN_TIME-1);
+    return pos_ == num_pos_ || time_==(MAX_RUN_TIME-1);
   }
 
   marine_robot_state* dst() const override
@@ -353,6 +351,9 @@ public:
     x_ = x;
     y_ = y;
     time_ = time;
+    //you can also put this in the first() method
+    num_pos_ = gloabl_size_of_connected_nodes[xy2number[(int)x_][(int)y_]];
+    //cout<< "size sorted_positions <recycle>: " << num_pos_ << endl;
     spot::kripke_succ_iterator::recycle(cond);
   }
 };
@@ -364,6 +365,7 @@ private:
   static const int num_move_directions = 4;    
   bdd odd_x_;
   bdd odd_y_;
+  bdd goal_;
   bdd t_[num_time_periods];
   bdd m_[num_move_directions];
 public:
@@ -372,9 +374,10 @@ public:
   {
     odd_x_ = bdd_ithvar(register_ap("odd_x"));
     odd_y_ = bdd_ithvar(register_ap("odd_y"));
+    goal_ = bdd_ithvar(register_ap("goal"));
     create_all_model_locations();
     get_state_number_from_xy();
-   
+
     //for(int i=0; i<num_time_periods; i++)
     //    t_[i] = bdd_ithvar(register_ap("t_"+to_string(i)));
   }
@@ -384,7 +387,6 @@ public:
     return new marine_robot_state();
   }
 
-  // To be defined later.
     marine_robot_succ_iterator* succ_iter(const spot::state* s) const override
     {
       auto ss = static_cast<const marine_robot_state*>(s);
@@ -407,7 +409,8 @@ public:
     auto ss = static_cast<const marine_robot_state*>(s);
     bool xodd = (int)ss->get_x() & 1;
     bool yodd = (int)ss->get_y() & 1;
-    return (xodd ? odd_x_ : !odd_x_) & (yodd ? odd_y_ : !odd_y_);
+    bool goal = (int)ss->get_x()== X_TARGET && (int)ss->get_y()== Y_TARGET;
+    return (xodd ? odd_x_ : !odd_x_) & (yodd ? odd_y_ : !odd_y_) & (goal ? goal_ : !goal_);
   }
 
   std::string format_state(const spot::state* s) const override
@@ -420,25 +423,30 @@ public:
 };
 
 void model_4(string formula){
+    cout<< ">>> in model_4\n";
    //just for test purposes
-   auto kk = std::make_shared<marine_robot_kripke>(spot::make_bdd_dict());
-   spot::print_dot(std::cout, kk);
-   if(true)return;
+   //auto kk = std::make_shared<marine_robot_kripke>(spot::make_bdd_dict());
+   //spot::print_dot(std::cout, kk);
+   //if(true)return;
    // Convert demo_kripke into an explicit graph
    
-   //spot::twa_graph_ptr kg = spot::copy(std::make_shared<marine_robot_kripke>(spot::make_bdd_dict()),
-   //                                  spot::twa::prop_set::all(), true);    
-   //Util::write2File("marine_ocean_model.dot", kg, "k");
-   //if(true) return;
+   spot::twa_graph_ptr kg = spot::copy(std::make_shared<marine_robot_kripke>(spot::make_bdd_dict()),
+                                     spot::twa::prop_set::all(), true);    
+   Util::write2File("marine_ocean_model.dot", kg, "k");
+   if(true) return;
    auto d = spot::make_bdd_dict();
    // Parse the input formula.
    //spot::parsed_formula pf = spot::parse_infix_psl("GF(odd_x) -> GF(odd_y)");
-   spot::parsed_formula pf = spot::parse_infix_psl("!FG(odd_x)");
-   if (pf.format_errors(std::cerr))
+   spot::parsed_formula pf = spot::parse_infix_psl("FG(goal)");
+   //spot::parsed_formula pf = spot::parse_infix_psl("FG(goal) & (!(odd_x & odd_y) U goal)");
+   if (pf.format_errors(std::cerr)){
+       cout << "the formula has error!\n";
      return ;
+   }
 
    // Translate its negation.
-   spot::formula f = spot::formula::Not(pf.f);
+   //spot::formula f = spot::formula::Not(pf.f);
+   spot::formula f = pf.f;
    spot::twa_graph_ptr af = spot::translator(d).run(f);
 
    // Find a run of or marine_robot_kripke that intersects af.
