@@ -90,6 +90,7 @@ Contributor(s):
             <pElem>.</pElem>
             <pElem>.</pElem>
             <pElem>.</pElem>
+            <pElem>.</pElem>
           </linkerDynSerch>
           <commandlineTool>g++</commandlineTool>
           <commandLine>-lspot -lbddx</commandLine>
@@ -136,6 +137,7 @@ Contributor(s):
         </asmTool>
         <linkerTool>
           <linkerDynSerch>
+            <pElem>.</pElem>
             <pElem>.</pElem>
             <pElem>.</pElem>
             <pElem>.</pElem>

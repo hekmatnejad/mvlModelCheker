@@ -65,11 +65,9 @@ namespace mvspot {
 
         //std::set<Node, bool (*)(const Node&, const Node&)> nodeSet(compareNode);
     
-    bool operator< (const lattice_node& obj) const {
-        //cout << "compare2: " << (this->compare(&obj) < 0) << endl;
-        //cout << "****"<<endl;
-        return (this->compare(&obj) > 0) ? true: false;
-    }
+        bool operator< (const lattice_node& obj) const {
+            return (this->compare(&obj) > 0) ? true: false;
+        }
 
         
         lattice_node() {
@@ -85,8 +83,6 @@ namespace mvspot {
         
         float compare(const lattice_node *other) const
         {
-            //cout << this->hash() << " >> " << other->hash() << " : " << this->getName() <<" "<<other->getName() << endl;
-            //cout << *this << " , " << *other << endl;
             float res = (this->getValue() - other->getValue());
             if (res != 0)
                 return res;
@@ -140,7 +136,6 @@ namespace mvspot {
     struct node_compare {//: public std::binary_function<lattice_node*,lattice_node*,bool>{
 
         bool operator()(lattice_node* lhs, lattice_node* rhs) {
-            //cout << "compare1: " << endl;
             float res = (lhs->getValue() - rhs->getValue());
             if (res != 0)
                 return (res > 0);
@@ -149,6 +144,7 @@ namespace mvspot {
             //return true;
         }
     };
+    
 #if 0
             bool compare( const lattice_node* lhs, const lattice_node* rhs) {
                 cout << "compare1: "<< endl;
@@ -161,30 +157,36 @@ namespace mvspot {
                     return ((lhs->getName().compare(rhs->getName()))>0);*/
             }
 #endif        
+            
     class mv_lattice {
     public:
 
-        mv_lattice(){
+        mv_lattice(string top_name="T", float top_val=1.0, string buttom_name="F", float buttom_val=0.0){
             //top_ = lattice_node("True", 1.0);
             //buttom_= lattice_node("False", 0.0);
-            top_.setName("T");
-            top_.setValue(1);
-            buttom_.setName("F");
-            buttom_.setValue(0);
+            top_.setName(top_name);
+            top_.setValue(top_val);
+            buttom_.setName(buttom_name);
+            buttom_.setValue(buttom_val);
             nodes_ = set<lattice_node*, node_compare>();
             nodes_.insert(&top_);
             nodes_.insert(&buttom_);
         }
+        
         mv_lattice(const mv_lattice& orig){
             
         }
+        
         virtual ~mv_lattice();
         string toString() const;
         friend std::ostream & operator<<(std::ostream & str, const mv_lattice & obj);
-
         void auto_update_values();
-
-
+        
+        std::set<lattice_node*, node_compare>* get_join_irreducibles(){
+            //todo: first update then return
+            return &join_irreducibles_;
+        }
+        
         lattice_node* getButtom_() {
             return &buttom_;
         }
@@ -203,7 +205,7 @@ namespace mvspot {
       lattice_node buttom_; 
       //std::set<lattice_node,lattice_node::node_compare> nodes_;
       std::set<lattice_node*, node_compare> nodes_;
-     
+      std::set<lattice_node*, node_compare> join_irreducibles_;
         
     };
 

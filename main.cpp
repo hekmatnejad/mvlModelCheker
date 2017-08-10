@@ -16,10 +16,12 @@
 #include "MvLtlModel.h"
 #include "Util.h"
 #include "ModelGenerator.h"
+#include <mutex>
 
 //#include <spot/twa/formula2bdd.hh>
 #include <spot/mv/version.hh>
 #include <spot/taalgos/dot.hh>
+#include <spot/twaalgos/word.hh>
 //#include <spot/tl/dot.hh>
 //#include <spot/taalgos/dot.hh>
 
@@ -45,12 +47,55 @@ void test();
 void dfs(spot::const_twa_graph_ptr aut, bdd query);
 int get_random(int low, int high);
 static spot::parsed_aut_ptr read_model_aut;
+static spot::kripke_graph_ptr kg_model;
+static spot::twa_graph_ptr aut_model;
+const static float X_POS[]={0,0,1,1,0,1,2,2,2,0,1,2,3,3,3,3};
+const static float Y_POS[]={0,1,1,0,2,2,2,1,0,3,3,3,3,2,1,0};
+class model_node {
+public:
+    model_node() {
+    }
+
+    model_node(float value, float x, float y) :
+    value(value), x(x), y(y) {
+    }
+    float GetValue() const {
+        return value;
+    }
+
+    float GetX() const {
+        return x;
+    }
+
+    float GetY() const {
+        return y;
+    }
+
+private:    
+    float value;
+    float x;
+    float y;
+};
+struct node_compare {//: public std::binary_function<lattice_node*,lattice_node*,bool>{
+
+    bool operator()(model_node* lhs, model_node* rhs) {
+        float res = (lhs->GetValue() - rhs->GetValue());
+        if (res != 0)
+            return (res <= 0);
+        else
+            return true;
+    }
+};
+
+model_node ** sorted_states_connected_to(unsigned state);
+static int gloabl_size_of_connected_nodes = 0;
 /**************************************************************************
  
    allsat handler for checking that all assignmenlsatBDD;
  */
  static bdd allsatSumBDD;
  static bdd allsatBDD;
+ static spot::bdd_dict_ptr shared_dict = spot::make_bdd_dict();
  
  void allsatHandler(char* varset, int size)
  
@@ -127,27 +172,30 @@ int main(int argc, char** argv) {
     mvspot::mv_ltl_model model = mvspot::mv_ltl_model();
     std::cout << model << std::endl;
     //generate a mock model and write it to a file for repetitive use
-    //model_generator::generate_model("ocean_model.dot");
+    //model_generator::generate_model("ocean_model.dot",shared_dict);
     //if(true)return 0;
-
     srand (time(NULL));
-    read_model_aut = Util::readAutFromFile("ocean_model.dot");
-    if(!read_model_aut)
+    read_model_aut = Util::readAutFromFile("ocean_model.dot",false,shared_dict);
+    if(!read_model_aut || read_model_aut->errors.size()>0)
     {
         cout << "could not read the model from file!";
         exit(0);
     }
-    spot::kripke_graph_ptr kg = read_model_aut->ks;
-    cout << (read_model_aut->errors.size())<<endl;
-    //std::list<parse_aut_error> el = read_model_aut->errors;
-    //cout<<">>>"<< (*el.begin()).second<<" -> " << (*el.begin()).first.end.filename<<endl;
-    auto aut = spot::copy(read_model_aut->aut->shared_from_this(), { true, false, false, false }, true);
-    spot::print_dot(std::cout, aut,"k");
+    kg_model = read_model_aut->ks;
+    aut_model = read_model_aut->aut;
+
+    for(int i=0; i<16; i++)
+    {
+        model_node ** result = sorted_states_connected_to(i);
+        cout<< "size: " << gloabl_size_of_connected_nodes << endl;
+    }
+    
+    //spot::print_dot(std::cout, aut_model,"k");
     if(true)return 0;
 
+    //------------------------
     //dfs(aut,bddtrue);
     //findSat(bddtrue);
-
     //model_1("F(w)");
     //mv_latice_test_1();
     //model_2("G (w & z)");
@@ -158,6 +206,38 @@ int main(int argc, char** argv) {
     cout << "done!\n";
     return 0;
 }
+mutex size_mutex;
+//this function sorts the visiting graph nodes based on the given map and 
+//distance values toward the target
+model_node ** sorted_states_connected_to(unsigned src){
+    static auto& gr = aut_model->get_graph();
+    static unsigned edge;
+    static unsigned dst;
+    model_node ** result;
+    
+    edge = gr.state_storage(src).succ;
+    std::set<model_node*, node_compare> around_nodes;
+    while(edge>0){
+        dst = gr.edge_storage(edge).dst;
+        float value = ((X_POS[dst]-X_END)*(X_POS[dst]-X_END)+(Y_POS[dst]-Y_END)*(Y_POS[dst]-Y_END));
+        model_node* node = new model_node(value,X_POS[dst],Y_POS[dst]);
+        around_nodes.insert(node);
+        std::cout<< "edge: " << edge << ", src: " << src << ", dst: " << dst << ", distance: " << node->GetValue() <<endl;
+        edge = gr.edge_storage(edge).next_succ;
+    }
+    result = new model_node*[around_nodes.size()]();
+    int cnt = 0;
+    for(std::set<model_node*>::iterator it = around_nodes.begin(); it!=around_nodes.end(); it++){
+        //std:cout << ((model_node*)(* it))->GetValue() << endl;
+        result[cnt++] = ((model_node*)(* it));
+    }
+    std::lock_guard<std::mutex> lock(size_mutex);
+    //size_mutex.lock();
+    gloabl_size_of_connected_nodes = around_nodes.size();
+    //size_mutex.unlock();
+    //note: do not forget to free memory after being done using this function
+    return result;
+ }
 
 void model_1(string formula){
 
@@ -618,21 +698,37 @@ public:
       float new_x = 0;
       float new_y = 0;
       switch(pos_){
-          case 4://move up
+          case 8://move up
               new_x = x_;
               new_y = y_+1;
               break;
-          case 3://move right
+          case 7://move up,right
+              new_x = x_+1;
+              new_y = y_+1;
+              break;
+          case 6://move right
               new_x = x_+1;
               new_y = y_;
               break;
-          case 2://move down
+          case 5://move right,down
+              new_x = x_+1;
+              new_y = y_-1;
+              break;
+          case 4://move down
               new_x = x_;
               new_y = y_-1;
               break;
-          case 1://move left
+          case 3://move down,left
+              new_x = x_-1;
+              new_y = y_-1;
+              break;
+          case 2://move left
               new_x = x_-1;
               new_y = y_;
+              break;
+          case 1://move left,up
+              new_x = x_-1;
+              new_y = y_+1;
               break;
         }
       if (is_restricted(new_x, new_y))
@@ -669,7 +765,7 @@ public:
     }
     if(time_==(MAX_RUN_TIME-1))
         return false;
-    pos_ = 4;
+    pos_ = NUM_POSITIONS;
     bool res = false;
     while(pos_>0){
         res = check_if_valid(x_, y_, pos_);   // There exists a successor.
@@ -714,21 +810,37 @@ public:
       float new_x = 0;
       float new_y = 0;
       switch(pos_){
-          case 4://move up
+          case 8://move up
               new_x = x_;
               new_y = y_+1;
               break;
-          case 3://move right
+          case 7://move up,right
+              new_x = x_+1;
+              new_y = y_+1;
+              break;
+          case 6://move right
               new_x = x_+1;
               new_y = y_;
               break;
-          case 2://move down
+          case 5://move right,down
+              new_x = x_+1;
+              new_y = y_-1;
+              break;
+          case 4://move down
               new_x = x_;
               new_y = y_-1;
               break;
-          case 1://move left
+          case 3://move down,left
+              new_x = x_-1;
+              new_y = y_-1;
+              break;
+          case 2://move left
               new_x = x_-1;
               new_y = y_;
+              break;
+          case 1://move left,up
+              new_x = x_-1;
+              new_y = y_+1;
               break;
         }
 

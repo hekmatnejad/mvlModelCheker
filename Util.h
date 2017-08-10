@@ -65,14 +65,14 @@ static stringstream readFromFile(string fName){
     return ss;
 }
 
-static spot::parsed_aut_ptr readAutFromFile(string fName){
+static spot::parsed_aut_ptr readAutFromFile(string fName, bool kripke_graph=true, spot::bdd_dict_ptr dict=spot::make_bdd_dict()){
     automaton_parser_options opt;
-    opt.want_kripke=false;
+    opt.want_kripke=kripke_graph;
     opt.ignore_abort=false;
     opt.debug=false;
     opt.trust_hoa=true;
     opt.raise_errors=false;
-    spot::parsed_aut_ptr kg = spot::parse_aut(fName, spot::make_bdd_dict(),
+    spot::parsed_aut_ptr kg = spot::parse_aut(fName, dict,
                     spot::default_environment::instance(),opt);
     return kg;
 }

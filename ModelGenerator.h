@@ -85,6 +85,13 @@ public:
     else
       return h > oh;
   }
+  
+  string toString(){
+    std::ostringstream out;
+    out << "(x = " << this->get_x() << ", y = " << this->get_y() << ", z = " << this->get_z() <<')';
+    return out.str();
+  }
+  
 };
 
   bool is_restricted(float x, float y)
@@ -305,14 +312,14 @@ public:
   }
 };
 
-void generate_model(string model_name){
+void generate_model(string model_name, spot::bdd_dict_ptr dict=spot::make_bdd_dict()){
    srand (time(NULL));
    //just for test purposes
    //auto kk = std::make_shared<model_kripke>(spot::make_bdd_dict());
    //spot::print_dot(std::cout, kk);
    // Convert demo_kripke into an explicit graph
    spot::twa_graph_ptr kg = spot::copy(std::make_shared<model_kripke>
-           (spot::make_bdd_dict()),spot::twa::prop_set::all(), true);    
+           (dict),spot::twa::prop_set::all(), true);    
    Util::write2FileAsHoa(model_name, kg, "k");
    cout << "model generated as: "<< model_name << endl;
 }
