@@ -88,12 +88,12 @@ struct node_compare {//comparator for sorting nodes based on least distance from
             return true;
     }
 };
-
+void create_all_model_locations();
 model_node ** sorted_states_connected_to(unsigned state);
-static int gloabl_size_of_connected_nodes = 0;
+int gloabl_size_of_connected_nodes[NUM_LOCATIONS];
 
  static spot::bdd_dict_ptr shared_dict = spot::make_bdd_dict();
-
+ void testme();
 /*
  * 
  */
@@ -106,8 +106,11 @@ int main(int argc, char** argv) {
     std::cout << model << std::endl;
     //generate a mock model and write it to a file for repetitive use
     //model_generator::generate_model("ocean_model.dot",shared_dict);
-    //get_state_number_from_xy();
-    //if(true)return 0;
+    
+    create_all_model_locations();
+    get_state_number_from_xy();
+    testme();
+    if(true)return 0;
     srand (time(NULL));
     read_model_aut = Util::readAutFromFile("ocean_model.dot",false,shared_dict);
     if(!read_model_aut || read_model_aut->errors.size()>0)
@@ -132,14 +135,16 @@ int main(int argc, char** argv) {
     cout << "done!\n";
     return 0;
 }
+void testme(){
+    
+}
 mutex size_mutex;
 //this function sorts the visiting graph nodes based on the given map and 
 //distance values toward the target
-model_node ** sorted_states_connected_to(unsigned src){
-    static auto& gr = aut_model->get_graph();
-    static unsigned edge;
-    static unsigned dst;
-    model_node ** result;
+model_node** sorted_states_connected_to(unsigned src){
+    auto& gr = aut_model->get_graph();
+    unsigned edge;
+    unsigned dst;
     
     edge = gr.state_storage(src).succ;
     std::set<model_node*, node_compare> around_nodes;
@@ -151,44 +156,36 @@ model_node ** sorted_states_connected_to(unsigned src){
         std::cout<< "edge: " << edge << ", src: " << src << ", dst: " << dst << ", distance: " << node->GetValue() <<endl;
         edge = gr.edge_storage(edge).next_succ;
     }
-    result = new model_node*[around_nodes.size()]();
+    model_node* result[around_nodes.size()];
+    //result = new model_node*[around_nodes.size()]();
     int cnt = 0;
     for(std::set<model_node*>::iterator it = around_nodes.begin(); it!=around_nodes.end(); it++){
-        //std:cout << ((model_node*)(* it))->GetValue() << endl;
+        //std:cout <<">>>"<< ((model_node*)(* it))->GetValue() << endl;
         result[cnt++] = ((model_node*)(* it));
     }
-    std::lock_guard<std::mutex> lock(size_mutex);
+    //std::lock_guard<std::mutex> lock(size_mutex);
     //size_mutex.lock();
-    gloabl_size_of_connected_nodes = around_nodes.size();
+    gloabl_size_of_connected_nodes[src] = around_nodes.size();
     //size_mutex.unlock();
     //note: do not forget to free memory after being done using this function
     return result;
  }
 
-model_node ** mock_result;
-model_node ** mockSorted_states_connected_to(unsigned src){
-    mock_result = new model_node*[8]();
-    int cnt = 0;
-    for(int i=0; i<8; i++){
-        mock_result[i] = new model_node(1,1,1);
-    }
-    std::lock_guard<std::mutex> lock(size_mutex);
-    //size_mutex.lock();
-    gloabl_size_of_connected_nodes = 8;
-    //size_mutex.unlock();
-    //note: do not forget to free memory after being done using this function
-    return mock_result;
- }
 static int xy2number[Y_END+1][X_END+1];
 
+static model_node ** all_model_locations[NUM_LOCATIONS];
+void create_all_model_locations(){
+    for(int i=0; i<NUM_LOCATIONS; i++)
+        all_model_locations[i] = sorted_states_connected_to(i);
+}
+
 void get_state_number_from_xy(){
-    cout <<"*********\n";
     for(int i=0; i<= X_END; i++){
         for(int j=0; j<= Y_END; j++){
             for(int m=0; m< NUM_LOCATIONS; m++){
                 if((int)X_POS[m]==i && (int)Y_POS[m]==j){
                     xy2number[i][j] = m;
-                    std::cout << i <<" " << j << " " << m << endl;
+                    //std::cout << i <<" " << j << " " << m << endl;
                     break;
                 }
             }
@@ -293,15 +290,13 @@ private:
   float y_;
   float time_;
   unsigned char pos_;
-  model_node ** sorted_positions_;
   int num_pos=0;
 public:
   marine_robot_succ_iterator(float x, float y, float time, bdd cond)
     : kripke_succ_iterator(cond), x_(x), y_(y), time_(time)
   {
-    sorted_positions_ = mock_result;// sorted_states_connected_to(xy2number[(int)x][(int)y]);
-    num_pos = gloabl_size_of_connected_nodes;
-    cout<< "size sorted_positions: " << gloabl_size_of_connected_nodes << endl;
+    num_pos = gloabl_size_of_connected_nodes[xy2number[(int)x_][(int)y_]];
+    cout<< "size sorted_positions: " << num_pos << endl;
   }
 
   bool first() override
@@ -339,8 +334,8 @@ public:
       float arrival_time = 0;
       float new_x = 0;
       float new_y = 0;
-      new_x = sorted_positions_[pos_]->GetX();
-      new_y = sorted_positions_[pos_]->GetY();
+      new_x = all_model_locations[xy2number[(int)x_][(int)y_]][pos_]->GetX();
+      new_y = all_model_locations[xy2number[(int)x_][(int)y_]][pos_]->GetY();
 
       if(x_==X_TARGET && y_==Y_TARGET){
         cout <<"***" <<x_ <<',' << y_ <<",t: " << time_ << endl;
@@ -353,12 +348,11 @@ public:
       return new marine_robot_state(new_x, new_y, arrival_time);
   }
 
-  void recycle(float x, float y, float time, bdd cond,model_node ** sorted_positions)
-  {//model_node ** sorted_positions
+  void recycle(float x, float y, float time, bdd cond)
+  {
     x_ = x;
     y_ = y;
     time_ = time;
-    sorted_positions_ = sorted_positions;
     spot::kripke_succ_iterator::recycle(cond);
   }
 };
@@ -378,7 +372,7 @@ public:
   {
     odd_x_ = bdd_ithvar(register_ap("odd_x"));
     odd_y_ = bdd_ithvar(register_ap("odd_y"));
-    mockSorted_states_connected_to(0);
+    create_all_model_locations();
     get_state_number_from_xy();
    
     //for(int i=0; i<num_time_periods; i++)
@@ -397,15 +391,14 @@ public:
       float x = ss->get_x();
       float y = ss->get_y();
       float time = ss->get_time();
-      //model_node ** sorted_positions = ss->get_sorted_positions();
       bdd cond = state_condition(ss);
-      /*if (iter_cache_)
+      if (iter_cache_)
         {
           auto it = static_cast<marine_robot_succ_iterator*>(iter_cache_);
           iter_cache_ = nullptr;    // empty the cache
-          it->recycle(x, y, time, cond, sorted_positions);
+          it->recycle(x, y, time, cond);
           return it;
-        }*/
+        }
       return new marine_robot_succ_iterator(x, y, time, cond);
     }
 

@@ -64,6 +64,11 @@ Contributor(s):
                    projectFiles="false">
       <itemPath>Makefile</itemPath>
     </logicalFolder>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false">
+      <itemPath>Makefile</itemPath>
+    </logicalFolder>
     <itemPath>ocean_triangulate.dot</itemPath>
   </logicalFolder>
   <projectmakefile>Makefile</projectmakefile>
