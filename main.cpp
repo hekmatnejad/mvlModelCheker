@@ -17,10 +17,12 @@
 #include "Util.h"
 #include "ModelGenerator.h"
 #include <mutex>
+#include <iomanip>
 
 //#include <spot/twa/formula2bdd.hh>
 #include <spot/mv/version.hh>
 #include <spot/taalgos/dot.hh>
+#include <spot/tl/dot.hh>
 #include <spot/twaalgos/word.hh>
 //#include <spot/tl/dot.hh>
 //#include <spot/taalgos/dot.hh>
@@ -94,6 +96,7 @@ int gloabl_size_of_connected_nodes[NUM_LOCATIONS];
 static int xy2number[Y_END+1][X_END+1];
 static model_node* * all_model_locations[NUM_LOCATIONS];
 static spot::bdd_dict_ptr shared_dict = spot::make_bdd_dict();
+float CERTAINTY_THREASHOLD = 1;
 /*
  * 
  */
@@ -187,6 +190,16 @@ void get_state_number_from_xy(){
         }
     }
 }
+float mock_current[4][4] = {{90,90,90,90},{90,90,90,90},{0,0,0,90},{0,0,0,90}};
+float calculate_certainty(float x1, float y1, float x2, float y2){
+    float certainty = 1;
+    //certainty = get_random(0,10)/10.0;//WRONG: nondeterminism
+    float c1 = mock_current[(int)x1][(int)y1];
+    float c2 = mock_current[(int)x2][(int)y2];
+    certainty =  1.0 - abs(c1-c2)/360.0;
+    cout << "cert: " <<certainty << endl;
+    return certainty;
+}
 
 void dfs(spot::const_twa_graph_ptr aut, bdd query)
 {
@@ -229,14 +242,11 @@ private:
   float x_;
   float y_;    
   float time_ = 0;
-  //int num_pos_=0;
-
+  bool is_certain_ = false;// has a bdd equvalent for certainty
 public:
-  marine_robot_state(float x = 0, float y = 0, float time = 0)//, int num_pos=0)
-    : x_((int)x % (X_END+1)), y_((int)y % (Y_END+1)), time_(time)//, num_pos_(num_pos)
+  marine_robot_state(float x = 0, float y = 0, float time = 0, bool is_certain = true)
+    : x_((int)x % (X_END+1)), y_((int)y % (Y_END+1)), time_(time), is_certain_(is_certain)
   {
-    //num_pos_ = gloabl_size_of_connected_nodes[xy2number[(int)x_][(int)y_]];
-    //cout<< "size sorted_positions: " << num_pos_ << endl;
   }
 
   float get_x() const
@@ -254,19 +264,19 @@ public:
       return time_;
   }
   
-  //int get_num_pos() const
-  //{
-  //    return num_pos_;
-  //}
-  
+  bool is_certain() const
+  {
+      return is_certain_;
+  }
+   
   marine_robot_state* clone() const override
   {
-    return new marine_robot_state(x_, y_, time_);
+    return new marine_robot_state(x_, y_, time_, is_certain_);
   }
 
   size_t hash() const override
   {
-    return (x_ * 31) + 13*y_ + time_*7111;
+    return (x_ * 31) + 13*y_ + time_*7111 + (is_certain_ ? 101 : 1001);
   }
 
   int compare(const spot::state* other) const override
@@ -311,9 +321,6 @@ public:
 
   bool next() override
   {
-    //if(time_==(MAX_RUN_TIME-1))
-    //    return false;
-    
     pos_++;
     if(x_==X_TARGET && y_==Y_TARGET){
         pos_=num_pos_;
@@ -324,6 +331,7 @@ public:
 
   bool done() const override
   {
+      //either time-out or explored all around locations
     return pos_ == num_pos_ || time_==(MAX_RUN_TIME-1);
   }
 
@@ -332,18 +340,23 @@ public:
       float arrival_time = 0;
       float new_x = 0;
       float new_y = 0;
+      //find a new position based on the available around locations
       new_x = all_model_locations[xy2number[(int)x_][(int)y_]][pos_]->GetX();
       new_y = all_model_locations[xy2number[(int)x_][(int)y_]][pos_]->GetY();
-
+      //reach the target location, break and return
       if(x_==X_TARGET && y_==Y_TARGET){
-        cout <<"***" <<x_ <<',' << y_ <<",t: " << time_ << endl;
-        return new marine_robot_state(x_, y_, time_);
+        //cout <<"***" <<x_ <<',' << y_ <<",t: " << time_ << endl;
+        return new marine_robot_state(x_, y_, time_, true);
       }
       else{
+        //need to be updated by a forecasted/calculated elapsed time
         arrival_time = (int)(time_ + 1) % MAX_RUN_TIME;
         cout <<x_<<','<<y_<<"->"<<new_x <<',' << new_y <<",t: " << arrival_time << endl;
       }
-      return new marine_robot_state(new_x, new_y, arrival_time);
+      float certainty_value = calculate_certainty(x_,y_,new_x,new_y);
+      bool is_certian = ((certainty_value>=CERTAINTY_THREASHOLD) ? true : false);
+      //create new state to be explored
+      return new marine_robot_state(new_x, new_y, arrival_time, is_certian);
   }
 
   void recycle(float x, float y, float time, bdd cond)
@@ -361,25 +374,21 @@ public:
 class marine_robot_kripke: public spot::kripke
 {
 private:
-  static const int num_time_periods = 4;
-  static const int num_move_directions = 4;    
   bdd odd_x_;
   bdd odd_y_;
   bdd goal_;
-  bdd t_[num_time_periods];
-  bdd m_[num_move_directions];
+  bdd certainty_;
+  string str_certainty_;
 public:
-  marine_robot_kripke(const spot::bdd_dict_ptr& d)
-    : spot::kripke(d)
+  marine_robot_kripke(const spot::bdd_dict_ptr& d, const string certainty)
+    : spot::kripke(d),str_certainty_(certainty)
   {
     odd_x_ = bdd_ithvar(register_ap("odd_x"));
     odd_y_ = bdd_ithvar(register_ap("odd_y"));
     goal_ = bdd_ithvar(register_ap("goal"));
-    create_all_model_locations();
-    get_state_number_from_xy();
-
-    //for(int i=0; i<num_time_periods; i++)
-    //    t_[i] = bdd_ithvar(register_ap("t_"+to_string(i)));
+    certainty_ = bdd_ithvar(register_ap(certainty));//registers the requested certainty 
+    create_all_model_locations();//create the ordered directions to explore at each position
+    get_state_number_from_xy();//create a map table for converting (x,y) to its state number
   }
 
   marine_robot_state* get_init_state() const override
@@ -410,7 +419,8 @@ public:
     bool xodd = (int)ss->get_x() & 1;
     bool yodd = (int)ss->get_y() & 1;
     bool goal = (int)ss->get_x()== X_TARGET && (int)ss->get_y()== Y_TARGET;
-    return (xodd ? odd_x_ : !odd_x_) & (yodd ? odd_y_ : !odd_y_) & (goal ? goal_ : !goal_);
+    return (xodd ? odd_x_ : !odd_x_) & (yodd ? odd_y_ : !odd_y_) & (goal ? goal_ : !goal_) & 
+            (ss->is_certain() ? certainty_ : !certainty_);
   }
 
   std::string format_state(const spot::state* s) const override
@@ -430,14 +440,23 @@ void model_4(string formula){
    //if(true)return;
    // Convert demo_kripke into an explicit graph
    
-   spot::twa_graph_ptr kg = spot::copy(std::make_shared<marine_robot_kripke>(spot::make_bdd_dict()),
-                                     spot::twa::prop_set::all(), true);    
-   Util::write2File("marine_ocean_model.dot", kg, "k");
-   if(true) return;
+   //spot::twa_graph_ptr kg = spot::copy(std::make_shared<marine_robot_kripke>(spot::make_bdd_dict()),
+   //                                  spot::twa::prop_set::all(), true);    
+   //Util::write2File("marine_ocean_model.dot", kg, "k");
+   //if(true) return;
    auto d = spot::make_bdd_dict();
-   // Parse the input formula.
-   //spot::parsed_formula pf = spot::parse_infix_psl("GF(odd_x) -> GF(odd_y)");
-   spot::parsed_formula pf = spot::parse_infix_psl("FG(goal)");
+   
+   //****************//
+   CERTAINTY_THREASHOLD = 0.8;
+   //****************//
+   //string str_threshold = std::to_string(CERTAINTY_THREASHOLD);
+   stringstream stream;
+   stream << fixed << setprecision(2) << CERTAINTY_THREASHOLD;
+   string str_threshold = stream.str();
+   string str_certainty_ap = "c > " + str_threshold;
+   formula = "FG(goal) & G \"" + str_certainty_ap + "\"";
+   cout << ">>> Formula: " << formula << endl;
+   spot::parsed_formula pf = spot::parse_infix_psl(formula);//"FG(goal) & G \"c > 0.2\" "
    //spot::parsed_formula pf = spot::parse_infix_psl("FG(goal) & (!(odd_x & odd_y) U goal)");
    if (pf.format_errors(std::cerr)){
        cout << "the formula has error!\n";
@@ -450,10 +469,9 @@ void model_4(string formula){
    spot::twa_graph_ptr af = spot::translator(d).run(f);
 
    // Find a run of or marine_robot_kripke that intersects af.
-   auto k = std::make_shared<marine_robot_kripke>(d);
-   cout<<"step: 2\n";
+   auto k = std::make_shared<marine_robot_kripke>(d, str_certainty_ap);
    if (auto run = k->intersecting_run(af))
-     std::cout << "formula is violated by the following run:\n" << *run;
+     std::cout << "found a plan by the following run:\n" << *run;
    else
-     std::cout << "formula is verified\n";
+     std::cout << "no plan found.\n";
 }
