@@ -107,11 +107,20 @@ int main(int argc, char** argv) {
     cout << mvspot::getVersion() << "\n" <<mvspot::getBuild() <<"\n" ;
     mvspot::mv_ltl_model model = mvspot::mv_ltl_model();
     std::cout << model << std::endl;
-    //generate a mock model and write it to a file for repetitive use
-    //model_generator::generate_model("ocean_model.dot",shared_dict);
+    std:ifstream inFile;
+    string model_filename = "ocean_model.dot";
+    inFile.open(model_filename);
+    if(!inFile.is_open()){
+        std::cout << "Generating the base model file.\n";
+        //generate a mock model and write it to a file for repetitive use
+        model_generator::generate_model("ocean_model.dot",shared_dict);
+    }
+    else
+        inFile.close();
+     
     //if(true)return 0;
     srand (time(NULL));
-    read_model_aut = Util::readAutFromFile("ocean_model.dot",false,shared_dict);
+    read_model_aut = Util::readAutFromFile(model_filename,false,shared_dict);
     if(!read_model_aut || read_model_aut->errors.size()>0)
     {
         cout << "could not read the model from file!";
@@ -438,14 +447,6 @@ void model_4(string formula){
    //auto kk = std::make_shared<marine_robot_kripke>(spot::make_bdd_dict());
    //spot::print_dot(std::cout, kk);
    //if(true)return;
-   // Convert demo_kripke into an explicit graph
-   
-   //spot::twa_graph_ptr kg = spot::copy(std::make_shared<marine_robot_kripke>(spot::make_bdd_dict()),
-   //                                  spot::twa::prop_set::all(), true);    
-   //Util::write2File("marine_ocean_model.dot", kg, "k");
-   //if(true) return;
-   auto d = spot::make_bdd_dict();
-   
    //****************//
    CERTAINTY_THREASHOLD = 0.8;
    //****************//
@@ -455,7 +456,23 @@ void model_4(string formula){
    string str_threshold = stream.str();
    string str_certainty_ap = "c > " + str_threshold;
    formula = "FG(goal) & G \"" + str_certainty_ap + "\"";
-   cout << ">>> Formula: " << formula << endl;
+   cout << ">>> Formula: " << formula << endl;    
+   // Convert demo_kripke into an explicit graph
+    std:ifstream inFile;
+    string ocean_model_filename = "marine_ocean_model.dot";
+    inFile.open(ocean_model_filename);
+    if(!inFile.is_open()){
+        std::cout << "Generating the ocean model file.\n";
+        //generate a mock model and write it to a file for repetitive use
+        spot::twa_graph_ptr kg = spot::copy(std::make_shared<marine_robot_kripke>
+                (shared_dict,str_certainty_ap),spot::twa::prop_set::all(), true);    
+        Util::write2File(ocean_model_filename, kg, "k");
+    }
+    else
+        inFile.close();   
+   //if(true) return;
+   //auto d = spot::make_bdd_dict();
+   
    spot::parsed_formula pf = spot::parse_infix_psl(formula);//"FG(goal) & G \"c > 0.2\" "
    //spot::parsed_formula pf = spot::parse_infix_psl("FG(goal) & (!(odd_x & odd_y) U goal)");
    if (pf.format_errors(std::cerr)){
@@ -466,10 +483,10 @@ void model_4(string formula){
    // Translate its negation.
    //spot::formula f = spot::formula::Not(pf.f);
    spot::formula f = pf.f;
-   spot::twa_graph_ptr af = spot::translator(d).run(f);
+   spot::twa_graph_ptr af = spot::translator(shared_dict).run(f);
 
    // Find a run of or marine_robot_kripke that intersects af.
-   auto k = std::make_shared<marine_robot_kripke>(d, str_certainty_ap);
+   auto k = std::make_shared<marine_robot_kripke>(shared_dict, str_certainty_ap);
    if (auto run = k->intersecting_run(af))
      std::cout << "found a plan by the following run:\n" << *run;
    else
