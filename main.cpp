@@ -113,7 +113,7 @@ int main(int argc, char** argv) {
     if(!inFile.is_open()){
         std::cout << "Generating the base model file.\n";
         //generate a mock model and write it to a file for repetitive use
-        model_generator::generate_model("ocean_model.dot",shared_dict);
+        model_generator::generate_model("ocean_model.dot",X_END,Y_END,X_TARGET,Y_TARGET,shared_dict);
     }
     else
         inFile.close();
@@ -199,7 +199,7 @@ void get_state_number_from_xy(){
         }
     }
 }
-float mock_current[4][4] = {{90,90,90,90},{90,90,90,90},{0,0,0,90},{0,0,0,90}};
+float mock_current[4][4] = {{90,90,90,90},{80,80,80,90},{0,0,0,90},{0,0,0,90}};
 float calculate_certainty(float x1, float y1, float x2, float y2){
     float certainty = 1;
     //certainty = get_random(0,10)/10.0;//WRONG: nondeterminism
@@ -207,7 +207,7 @@ float calculate_certainty(float x1, float y1, float x2, float y2){
     float c2 = mock_current[(int)x2][(int)y2];
     certainty =  1.0 - abs(c1-c2)/360.0;
     cout << "cert: " <<certainty << endl;
-    return certainty;
+    return 1.0;//certainty;
 }
 
 void dfs(spot::const_twa_graph_ptr aut, bdd query)
@@ -285,7 +285,15 @@ public:
 
   size_t hash() const override
   {
-    return (x_ * 31) + 13*y_ + time_*7111 + (is_certain_ ? 101 : 1001);
+      //assuming all variables are positive
+      int hash = 23;
+      hash = hash*31 + x_;
+      hash = hash*31 + y_;
+      hash = hash*31 + time_;
+      hash = hash*31 + is_certain_;
+      return hash;
+    //return  (x_ + y_) * (x_ + y_ + 1) / 2 + x_;
+    //return (x_ * 31) + 13*y_ + time_*7111 + (is_certain_ ? 101 : 1001);
   }
 
   int compare(const spot::state* other) const override
@@ -448,7 +456,7 @@ void model_4(string formula){
    //spot::print_dot(std::cout, kk);
    //if(true)return;
    //****************//
-   CERTAINTY_THREASHOLD = 0.8;
+   CERTAINTY_THREASHOLD = 0.99;
    //****************//
    //string str_threshold = std::to_string(CERTAINTY_THREASHOLD);
    stringstream stream;
@@ -472,7 +480,7 @@ void model_4(string formula){
         inFile.close();   
    //if(true) return;
    //auto d = spot::make_bdd_dict();
-   
+   formula = "FG(goal) & (!(odd_x & odd_y) U goal)";
    spot::parsed_formula pf = spot::parse_infix_psl(formula);//"FG(goal) & G \"c > 0.2\" "
    //spot::parsed_formula pf = spot::parse_infix_psl("FG(goal) & (!(odd_x & odd_y) U goal)");
    if (pf.format_errors(std::cerr)){

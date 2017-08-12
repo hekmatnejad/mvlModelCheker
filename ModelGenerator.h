@@ -29,12 +29,12 @@ using namespace std;
 
 #define PRINT_DEBUG_DATA 1
 #define NUM_POSITIONS 8
-#define X_END 3
-#define Y_END 3
 #define X_START 0
 #define Y_START 0
-#define X_TARGET 3
-#define Y_TARGET 3
+int X_END = 3;
+int Y_END = 3;
+int X_TARGET = 3;
+int Y_TARGET = 3;
 
 int get_random(int low, int high);
 
@@ -312,8 +312,13 @@ public:
   }
 };
 
-void generate_model(string model_name, spot::bdd_dict_ptr dict=spot::make_bdd_dict()){
-   srand (time(NULL));
+void generate_model(string model_name, int x_end, int y_end, int x_target, int y_target, 
+                        spot::bdd_dict_ptr dict=spot::make_bdd_dict()){
+    X_END = x_end;
+    Y_END = y_end;
+    X_TARGET = x_target;
+    Y_TARGET = y_target;
+    srand (time(NULL));
    //just for test purposes
    //auto kk = std::make_shared<model_kripke>(spot::make_bdd_dict());
    //spot::print_dot(std::cout, kk);
