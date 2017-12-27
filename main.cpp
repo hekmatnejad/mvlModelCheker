@@ -26,7 +26,7 @@
 #include <spot/twaalgos/word.hh>
 //#include <spot/tl/dot.hh>
 //#include <spot/taalgos/dot.hh>
-
+#include "secondary.h"
 using namespace std;
 
 #define PRINT_DEBUG_DATA 1
@@ -102,6 +102,7 @@ float CERTAINTY_THREASHOLD = 1;
  */
 int main(int argc, char** argv) {
     //test();
+    //model_3("F !fire");
     //return 0;
     std::cout << "started...\n";
     cout << mvspot::getVersion() << "\n" <<mvspot::getBuild() <<"\n" ;
@@ -199,7 +200,7 @@ void get_state_number_from_xy(){
         }
     }
 }
-float mock_current[4][4] = {{90,90,90,90},{80,80,80,90},{0,0,0,90},{0,0,0,90}};
+float mock_current[4][4] = {{90,90,90,90},{0,0,0,90},{0,0,0,90},{0,0,0,90}};
 float calculate_certainty(float x1, float y1, float x2, float y2){
     float certainty = 1;
     //certainty = get_random(0,10)/10.0;//WRONG: nondeterminism
@@ -207,7 +208,7 @@ float calculate_certainty(float x1, float y1, float x2, float y2){
     float c2 = mock_current[(int)x2][(int)y2];
     certainty =  1.0 - abs(c1-c2)/360.0;
     cout << "cert: " <<certainty << endl;
-    return 1.0;//certainty;
+    return certainty;
 }
 
 void dfs(spot::const_twa_graph_ptr aut, bdd query)
@@ -480,7 +481,7 @@ void model_4(string formula){
         inFile.close();   
    //if(true) return;
    //auto d = spot::make_bdd_dict();
-   formula = "FG(goal) & (!(odd_x & odd_y) U goal)";
+   //formula = "FG(goal) & (!(odd_x & odd_y) U goal)";
    spot::parsed_formula pf = spot::parse_infix_psl(formula);//"FG(goal) & G \"c > 0.2\" "
    //spot::parsed_formula pf = spot::parse_infix_psl("FG(goal) & (!(odd_x & odd_y) U goal)");
    if (pf.format_errors(std::cerr)){

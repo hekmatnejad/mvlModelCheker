@@ -15,13 +15,13 @@ CND_PACKAGE_DIR_Debug=dist/Debug/GNU-MacOSX/package
 CND_PACKAGE_NAME_Debug=mvlmodelcheker.tar
 CND_PACKAGE_PATH_Debug=dist/Debug/GNU-MacOSX/package/mvlmodelcheker.tar
 # Release configuration
-CND_PLATFORM_Release=GNU-Linux
-CND_ARTIFACT_DIR_Release=dist/Release/GNU-Linux
+CND_PLATFORM_Release=GNU-MacOSX
+CND_ARTIFACT_DIR_Release=dist/Release/GNU-MacOSX
 CND_ARTIFACT_NAME_Release=mvlmodelcheker
-CND_ARTIFACT_PATH_Release=dist/Release/GNU-Linux/mvlmodelcheker
-CND_PACKAGE_DIR_Release=dist/Release/GNU-Linux/package
+CND_ARTIFACT_PATH_Release=dist/Release/GNU-MacOSX/mvlmodelcheker
+CND_PACKAGE_DIR_Release=dist/Release/GNU-MacOSX/package
 CND_PACKAGE_NAME_Release=mvlmodelcheker.tar
-CND_PACKAGE_PATH_Release=dist/Release/GNU-Linux/package/mvlmodelcheker.tar
+CND_PACKAGE_PATH_Release=dist/Release/GNU-MacOSX/package/mvlmodelcheker.tar
 #
 # include compiler specific variables
 #

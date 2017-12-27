@@ -380,7 +380,7 @@ void model_3(string formula){
   kg->state_from_number(1)->cond(f);
   kg->state_from_number(2)->cond(!f);
   kg->state_from_number(3)->cond(f);
-
+  
 #if 0 
   stringstream os;
   spot::print_dot(os, kg, "k");
