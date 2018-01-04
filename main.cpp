@@ -42,6 +42,7 @@ using namespace std;
 #define MAX_RUN_TIME 8//1580 //:RUN FINISHED; exit value 0; real time: 3s; user: 230ms; system: 700ms
 #define X_TARGET 3
 #define Y_TARGET 3
+const int NUM_CARS = 2;
 
 void model_1(string formula);
 void model_2(string formula);
@@ -149,7 +150,17 @@ int main(int argc, char** argv) {
     
     //spot::print_dot(std::cout, aut_model,"k");
     //if(true)return 0;
-    
+    /*
+    twa_succ_iterator* s1 =  aut_model->succ_iter(aut_model->get_init_state());
+    twa_succ_iterator* s2 =  aut_model->succ_iter(aut_model->get_init_state());
+    s1->first();
+    s2->first();
+    cout << "s1: " << aut_model->state_number(s1->dst()) <<  "  s2: " << aut_model->state_number(s2->dst()) << endl;
+    s1->next();
+    cout << "s1: " << aut_model->state_number(s1->dst()) <<  "  s2: " << aut_model->state_number(s2->dst()) << endl;
+    s1->~twa_succ_iterator();
+    s2->~twa_succ_iterator();
+    */
     model_4("GF(odd_x) -> GF(odd_y)");
     
     cout << "done!\n";
@@ -260,8 +271,8 @@ void dfs(spot::const_twa_graph_ptr aut, bdd query)
 class marine_robot_state: public spot::state
 {
 private:
-    unsigned state_num_;
-    twa_succ_iterator* aut_succ_;
+    unsigned* state_num_ ;
+    twa_succ_iterator** aut_succ_;
     spot::twa_graph_ptr org_model_;
   //float x_;
   //float y_;    
@@ -273,9 +284,16 @@ public:
   //{
   //}
     
-  marine_robot_state(unsigned state_num, float time = 0, bool is_certain = true, twa_succ_iterator* aut_succ=0, spot::twa_graph_ptr org_model=0)
-    : state_num_(state_num), time_(time), is_certain_(is_certain), aut_succ_(aut_succ), org_model_(org_model)
+  marine_robot_state(unsigned* state_num=0, float time = 0, bool is_certain = true, twa_succ_iterator** aut_succ=0, spot::twa_graph_ptr org_model=0)
+    : time_(time), is_certain_(is_certain), org_model_(org_model)
   {
+        aut_succ_ = new twa_succ_iterator* [NUM_CARS];
+        state_num_ = new unsigned [NUM_CARS];
+      for(int i=0; i<NUM_CARS; i++)
+      {
+          aut_succ_[i] = aut_succ[i];
+          state_num_[i] = state_num[i];
+      }
   }
     /*
     marine_robot_state(const spot::state* copy_from)
@@ -288,12 +306,12 @@ public:
         time_ = ss->time_; 
     }
   */
-  unsigned get_state_num() const
+  unsigned* get_state_num() const
   {
       return state_num_;
   }
   
-  twa_succ_iterator* get_aut_succ() const
+  twa_succ_iterator** get_aut_succ() const
   {
       return aut_succ_;
   }
@@ -328,7 +346,10 @@ public:
   {
       //assuming all variables are positive
       int hash = 23;
-      hash = hash*31 + state_num_;
+      for(int i=0; i<NUM_CARS; i++)
+      {
+        hash = hash*31 + state_num_[i];
+      }
       //hash = hash*31 + aut_succ_->dst()->hash();
       //hash = hash*31 + x_;
       //hash = hash*31 + y_;
@@ -355,8 +376,8 @@ public:
 class marine_robot_succ_iterator: public spot::kripke_succ_iterator
 {
 private:
-    unsigned state_num_;
-    twa_succ_iterator* aut_succ_;
+    //unsigned state_num_;
+    twa_succ_iterator** aut_succ_;
     spot::twa_graph_ptr org_model_;
   //float x_;
   //float y_;
@@ -371,16 +392,20 @@ public:
  //   //cout<< "size sorted_positions: <constructor>" << num_pos_ << endl;
  // }
 
-    marine_robot_succ_iterator(unsigned state_num, spot::twa_graph_ptr org_model, float time, bdd cond)
-    : kripke_succ_iterator(cond), state_num_(state_num),org_model_(org_model), time_(time)
+    marine_robot_succ_iterator(unsigned* state_num, spot::twa_graph_ptr org_model, float time, bdd cond)
+    : kripke_succ_iterator(cond), org_model_(org_model), time_(time)
   {
     //num_pos_ = gloabl_size_of_connected_nodes[xy2number[(int)x_][(int)y_]];
-        aut_succ_ = org_model->succ_iter(org_model->state_from_number(state_num));
+        aut_succ_ = new twa_succ_iterator*[NUM_CARS];
+        for(int i=0; i<NUM_CARS; i++)
+            aut_succ_[i] = org_model->succ_iter(org_model->state_from_number(state_num[i]));
   }
 
   bool first() override
   {
-    bool res =  aut_succ_->first();
+    bool res = false;
+    for(int i=0; i<NUM_CARS; i++)
+        res |=  aut_succ_[i]->first();
     //if(x_==X_TARGET && y_==Y_TARGET){
     //    pos_ = 0;
     //    return true;
@@ -393,7 +418,9 @@ public:
 
   bool next() override
   {
-    bool res =  aut_succ_->next();
+    bool res = false;
+    for(int i=0; i<NUM_CARS; i++)
+        res |= aut_succ_[i]->next();
     return res;
     //pos_++;
     //if(x_==X_TARGET && y_==Y_TARGET){
@@ -405,7 +432,9 @@ public:
 
   bool done() const override
   {
-      bool res = aut_succ_->done();
+      bool res = true;
+    for(int i=0; i<NUM_CARS; i++)
+        res &= aut_succ_[i]->done();
       return res;
       //either time-out or explored all around locations
     //return pos_ == num_pos_ || time_==(MAX_RUN_TIME-1);
@@ -414,11 +443,16 @@ public:
   marine_robot_state* dst() const override
   {
       
-      unsigned state_num = org_model_->state_number(aut_succ_->dst());
+      unsigned state_num[NUM_CARS];
+      twa_succ_iterator* tmp_succ[NUM_CARS];
+    for(int i=0; i<NUM_CARS; i++){
+        state_num[i] = org_model_->state_number(aut_succ_[i]->dst());
+        tmp_succ[i] = org_model_->succ_iter(aut_succ_[i]->dst());
+    }
       //std::cout << "~~~~~~~~~ " << org_model_->get_dict()->bdd_map[org_model_->succ_iter(aut_succ_->dst())->cond().id()].f << std::endl;
      
       //std::cout << "state_num >>>> " << state_num << "     " << org_model_->succ_iter(aut_succ_->dst())->cond() << std::endl;
-      return new marine_robot_state(state_num, 0, true, org_model_->succ_iter(aut_succ_->dst()), org_model_);
+      return new marine_robot_state(state_num, 0, true, tmp_succ, org_model_);
       /*
       float arrival_time = 0;
       float new_x = 0;
@@ -454,11 +488,13 @@ public:
     spot::kripke_succ_iterator::recycle(cond);
   }
 */
-  void recycle(unsigned state_num, float time, twa_succ_iterator* aut_succ, bdd cond)
+//  void recycle(unsigned state_num, float time, twa_succ_iterator* aut_succ, bdd cond)
+  void recycle(twa_succ_iterator* aut_succ[], bdd cond)
   {
-      state_num_ = state_num;
-    time_ = time;
-    aut_succ_ = aut_succ;
+      //state_num_ = state_num;
+    //time_ = time;
+      for(int i=0; i<NUM_CARS; i++)
+        aut_succ_[i] = aut_succ[i];
     //you can also put this in the first() method
     //num_pos_ = gloabl_size_of_connected_nodes[xy2number[(int)x_][(int)y_]];
     //cout<< "size sorted_positions <recycle>: " << num_pos_ << endl;
@@ -475,40 +511,52 @@ private:
   bdd certainty_;
   string str_certainty_;
   spot::twa_graph_ptr org_model_;
-  unsigned init_state_;
-  list<string> lst_str_loc_;
+  unsigned* init_state_;
+  list<string>* lst_str_loc_;
   //list<bdd> lst_loc_bdd_;
-  std::map<string,bdd> map_str_bdd_loc_;
+  std::map<string,bdd>* map_str_bdd_loc_;
 
 public:
-  marine_robot_kripke(const spot::bdd_dict_ptr& d, const string certainty,const spot::twa_graph_ptr org_model, const unsigned init_state, list<string> lst_str_loc)
-    : spot::kripke(d),str_certainty_(certainty), org_model_(org_model), init_state_(init_state)//, lst_str_loc_(lst_str_loc,5)
+  marine_robot_kripke(const spot::bdd_dict_ptr& d, const string certainty,const spot::twa_graph_ptr org_model, const unsigned init_state[], list<string> lst_str_loc[])
+    : spot::kripke(d),str_certainty_(certainty), org_model_(org_model)
   {
-        lst_str_loc_ = lst_str_loc;
     //odd_x_ = bdd_ithvar(register_ap("odd_x"));
     //odd_y_ = bdd_ithvar(register_ap("odd_y"));
     goal_ = bdd_ithvar(register_ap("goal"));
     certainty_ = bdd_ithvar(register_ap(certainty));//registers the requested certainty 
     //create_all_model_locations();//create the ordered directions to explore at each position
     //get_state_number_from_xy();//create a map table for converting (x,y) to its state number
-    for(std::list<string>::iterator it=lst_str_loc_.begin(); it!=lst_str_loc_.end(); it++ ){
-        bdd res = bdd_ithvar(register_ap(*it));
-        map_str_bdd_loc_[*it]=res;
-        cout << "@@@ @@@ " << *it << "  " << res << "  bdd: " << map_str_bdd_loc_[*it] <<  endl;
+    lst_str_loc_ = new list<string>[NUM_CARS];
+    map_str_bdd_loc_ = new std::map<string,bdd>[NUM_CARS];
+    init_state_ = new unsigned[NUM_CARS];
+    for(int i=0; i<NUM_CARS; i++){
+        lst_str_loc_[i] = lst_str_loc[i];
+        init_state_[i] = init_state[i];
+        for(std::list<string>::iterator it=lst_str_loc_[i].begin(); it!=lst_str_loc_[i].end(); it++ ){
+            bdd res = bdd_ithvar(register_ap(*it));
+            map_str_bdd_loc_[i][*it]=res;
+            cout << "@@@ @@@ " << *it << "  " << res << "  bdd: " << map_str_bdd_loc_[i][*it] <<  endl;
+        }
     }
   }
 
   marine_robot_state* get_init_state() const override
   {
     //return new marine_robot_state();
-    twa_succ_iterator* aut_succ = org_model_->succ_iter(org_model_->get_init_state());
+      twa_succ_iterator* aut_succ[NUM_CARS];
+    for(int i=0; i<NUM_CARS; i++)
+    {
+        aut_succ[i] = org_model_->succ_iter(org_model_->state_from_number(init_state_[i]));
+    }
     return new marine_robot_state(init_state_, 0, true, aut_succ, org_model_);
   }
 
     marine_robot_succ_iterator* succ_iter(const spot::state* s) const override
     {
       auto ss = static_cast<const marine_robot_state*>(s);
-      unsigned state_num = ss->get_state_num();
+      unsigned state_num[NUM_CARS];
+      for(int i=0; i<NUM_CARS; i++)
+        state_num[i] = ss->get_state_num()[i];
       //twa_succ_iterator* aut_succ = org_model_->succ_iter(org_model_->state_from_number(state_num));//todo: change 0 to state_num
       //float x = ss->get_x();
       //float y = ss->get_y();
@@ -520,39 +568,46 @@ public:
           auto it = static_cast<marine_robot_succ_iterator*>(iter_cache_);
           iter_cache_ = nullptr;    // empty the cache
           //it->recycle(x, y, time, cond);
-          it->recycle(state_num, time, ss->get_aut_succ(), cond);
+          it->recycle(ss->get_aut_succ(), cond);
+          //it->recycle(state_num, time, ss->get_aut_succ(), cond);
           return it;
         }
       //return new marine_robot_succ_iterator(x, y, time, cond);
       return new marine_robot_succ_iterator(state_num, org_model_, time, cond);
     }
 
-    list<string> get_lst_str_loc() const
+    list<string>* get_lst_str_loc() const
     {
         return lst_str_loc_;
     }
     
-    std::map<string,bdd> get_map_str_bdd_loc() const
+    std::map<string,bdd>* get_map_str_bdd_loc() const
     {
         return map_str_bdd_loc_;
     }
     
   bdd state_condition(const spot::state* s) const override
   {
+      cout << "@@@@@@ ---------  @@@@@@\n";
     auto ss = static_cast<const marine_robot_state*>(s);
-    string symbol = "C1_loc_" + std::to_string(ss->get_state_num());      
     bdd res = bddtrue;
-    list<string> tmp_symbols = get_lst_str_loc();
-    map<string,bdd> tmp_map = get_map_str_bdd_loc();
-    //org_model_->get_dict()->bdd_map[org_model_->succ_iter(aut_succ_->dst())->cond().id()].f
-    for(std::list<string>::iterator it = tmp_symbols.begin(); it != tmp_symbols.end(); it++ ){
-            cout << "@@@@@@ @@@@@@ " << *it << "   " << tmp_map[*it] <<  "  bdd: " << tmp_map[*it] << endl;
-        if((*it)==symbol){
-            res &= tmp_map[*it];
-        }
-        else{
-            //cout << "@@@@@@   @@@@@@ " << *it << (tmp_map[*it]) << endl;
-            res &= !(tmp_map[*it]);
+    list<string>* tmp_symbols;
+    map<string,bdd>* tmp_map;
+    tmp_symbols = get_lst_str_loc();
+    tmp_map = get_map_str_bdd_loc();
+    
+    for(int i=0; i<NUM_CARS; i++){
+        string symbol = "C"+std::to_string(i+1)+"_loc_" + std::to_string(ss->get_state_num()[i]);      
+        //org_model_->get_dict()->bdd_map[org_model_->succ_iter(aut_succ_->dst())->cond().id()].f
+        for(std::list<string>::iterator it = tmp_symbols[i].begin(); it != tmp_symbols[i].end(); it++ ){
+                cout << "@@@@@@ @@@@@@ " << *it <<  "  bdd: " << tmp_map[i][*it] << endl;
+            if((*it)==symbol){
+                res &= tmp_map[i][*it];
+            }
+            else{
+                //cout << "@@@@@@   @@@@@@ " << *it << (tmp_map[*it]) << endl;
+                res &= !(tmp_map[i][*it]);
+            }
         }
     }
     
@@ -563,7 +618,7 @@ public:
     //bool xodd = (int)ss->get_x() & 1;
     //bool yodd = (int)ss->get_y() & 1;
     //bool goal = (int)ss->get_x()== X_TARGET && (int)ss->get_y()== Y_TARGET;
-    bool goal = (int)ss->get_state_num() >= 1;
+    bool goal = true;
     return res & (goal ? goal_ : !goal_) & (ss->is_certain() ? certainty_ : !certainty_);
     //return (xodd ? odd_x_ : !odd_x_) & (yodd ? odd_y_ : !odd_y_) & (goal ? goal_ : !goal_) & 
     //        (ss->is_certain() ? certainty_ : !certainty_);
@@ -573,8 +628,15 @@ public:
   {
     auto ss = static_cast<const marine_robot_state*>(s);
     std::ostringstream out;
+    string str_state = "<";
+    for(int i=0; i<NUM_CARS; i++){
+        str_state += std::to_string(ss->get_state_num()[i]);
+        if((i+1)<NUM_CARS)
+            str_state += ",";
+    }
+    str_state += ">";
     //out << "(x = " << ss->get_x() << ", y = " << ss->get_y() << ", t = " << ss->get_time() <<')';
-    out << "(state_num = " << ss->get_state_num() << ", is_certain = " << ss->is_certain() << ", t = " << ss->get_time() <<')';
+    out << "(state_num = " << str_state << ", is_certain = " << ss->is_certain() << ", t = " << ss->get_time() <<')';
     return out.str();
   }
   
@@ -597,17 +659,16 @@ void model_4(string formula){
    //****************//
    CERTAINTY_THREASHOLD = 0.99;
    //float x = 0, float y = 0, float time = 0, bool is_certain = true
-   unsigned init_state_1;
-   unsigned init_state_2;
+   unsigned init_state[NUM_CARS];
    //"q=[1,1]" "q=[0.5,1]" "q=[0,0]"
-   init_state_1 = 5;
-   init_state_2 = 6;
-   string str_loc_1[] = {"C1_loc_1","C1_loc_9"};
-   string str_loc_2[] = {"C2_loc_4","C2_loc_12"};
-   list<string> lst_loc_1;
-   list<string> lst_loc_2;
-   lst_loc_1.push_back(str_loc_1[0]);
-   lst_loc_1.push_back(str_loc_1[1]);
+   init_state[0] = 5;
+   init_state[1] = 6;
+   string str_loc[NUM_CARS][2] {{"C1_loc_1","C1_loc_9"}, {"C2_loc_4","C2_loc_12"}};
+   list<string> lst_loc[NUM_CARS];
+   lst_loc[0].push_back(str_loc[0][0]);
+   lst_loc[0].push_back(str_loc[0][1]);
+   lst_loc[1].push_back(str_loc[1][0]);
+   lst_loc[1].push_back(str_loc[1][1]);
    //****************//
    //string str_threshold = std::to_string(CERTAINTY_THREASHOLD);
    stringstream stream;
@@ -616,9 +677,11 @@ void model_4(string formula){
    string str_certainty_ap = "q > " + str_threshold;
    //formula = "F(C1_loc_9) & FG(goal) & G \"" + str_certainty_ap + "\"";
    formula = "F(C1_loc_1) & F(C1_loc_9) & ((!C1_loc_1) U C1_loc_9)";
+   formula += " & F(C2_loc_4) & F(C2_loc_12) & ((!C2_loc_12) U C2_loc_4)";
    //formula = "FG(goal) & G \"" + str_certainty_ap + "\"";
    cout << ">>> Formula: " << formula << endl;    
    // Convert demo_kripke into an explicit graph
+   /*
     std:ifstream inFile;
     string ocean_model_filename = "marine_ocean_model.dot";
     inFile.open(ocean_model_filename);
@@ -626,11 +689,12 @@ void model_4(string formula){
         std::cout << "Generating the ocean model file.\n";
         //generate a mock model and write it to a file for repetitive use
         spot::twa_graph_ptr kg = spot::copy(std::make_shared<marine_robot_kripke>
-                (shared_dict,str_certainty_ap, aut_model, init_state_1, lst_loc_1),spot::twa::prop_set::all(), true);    
+                (shared_dict,str_certainty_ap, aut_model, init_state, lst_loc),spot::twa::prop_set::all(), true);    
         Util::write2File(ocean_model_filename, kg, "k");
     }
     else
         inFile.close();   
+    */
    //if(true) return;
    //auto d = spot::make_bdd_dict();
    //formula = "FG(goal) & (!(odd_x & odd_y) U goal)";
@@ -648,7 +712,7 @@ void model_4(string formula){
    
 
       // Find a run of or marine_robot_kripke that intersects af.
-   auto k = std::make_shared<marine_robot_kripke>(shared_dict, str_certainty_ap, aut_model, init_state_1, lst_loc_1);
+   auto k = std::make_shared<marine_robot_kripke>(shared_dict, str_certainty_ap, aut_model, init_state, lst_loc);
    
 
    if (auto run = k->intersecting_run(af))
