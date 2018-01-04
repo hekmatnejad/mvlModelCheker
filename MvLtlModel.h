@@ -174,7 +174,7 @@ namespace mvspot {
         }
         
         mv_lattice(const mv_lattice& orig){
-            
+            std::cout << "This constructor need to be coded.\n";
         }
         
         virtual ~mv_lattice();
@@ -209,6 +209,22 @@ namespace mvspot {
         
     };
 
+    class mv_interval{
+    public:
+        mv_interval(float low, float high): low_(low), high_(high){} 
+        
+        float get_low(){
+            return low_;
+        }
+        
+        float get_high(){
+            return high_;
+        }
+    private:
+        float low_;
+        float high_;
+        mv_interval();
+    };
 
 }
 

@@ -36,6 +36,7 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 # Object Files
 OBJECTFILES= \
 	${OBJECTDIR}/MvLtlModel.o \
+	${OBJECTDIR}/mvtwaproduct.o \
 	${OBJECTDIR}/Util.o \
 	${OBJECTDIR}/main.o
 
@@ -68,6 +69,12 @@ ${OBJECTDIR}/MvLtlModel.o: MvLtlModel.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/MvLtlModel.o MvLtlModel.cpp
+
+${OBJECTDIR}/mvtwaproduct.o: mvtwaproduct.cpp
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/mvtwaproduct.o mvtwaproduct.cpp
+
 
 ${OBJECTDIR}/Util.o: Util.cpp
 	${MKDIR} -p ${OBJECTDIR}

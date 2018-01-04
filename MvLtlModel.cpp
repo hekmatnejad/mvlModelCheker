@@ -125,11 +125,11 @@ namespace mvspot {
 
     bool lattice_node::add_above_of(lattice_node * target) {
         
-        if (this->below_nodes.count(target) > 0)
+        if (this->below_nodes.count(target) > 0)//check if the target is already below the current node
             return true;
-        if (this->getValue() <= target->getValue())
+        if (this->getValue() <= target->getValue())//check if the value of target is less than the current node
             return false;
-        else
+        else//add the target below of the current node
         {
             pair<set<lattice_node*>::iterator,bool> res = this->below_nodes.insert(target);
             if ((bool)res.second == false)

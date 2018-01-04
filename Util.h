@@ -64,7 +64,9 @@ static stringstream readFromFile(string fName){
     //return buffer;
     return ss;
 }
-
+// 1 Fin(0)
+//0 t
+//recognized: HOA, LBTT, DSTAR, or neverclaim.
 static spot::parsed_aut_ptr readAutFromFile(string fName, bool kripke_graph=true, spot::bdd_dict_ptr dict=spot::make_bdd_dict()){
     automaton_parser_options opt;
     opt.want_kripke=kripke_graph;
