@@ -38,6 +38,11 @@
 #include <spot/kripke/kripkegraph.hh>
 //#include "mvkripkegraph.h"
 #include <spot/parseaut/public.hh>
+#include <spot/twa/bddprint.hh>
+#include <spot/twa/twagraph.hh>
+
+
+
 
 using namespace std;
 using namespace spot;
