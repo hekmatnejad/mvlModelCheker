@@ -58,7 +58,7 @@ namespace mvspot {
     ===============================================*/
 
     mv_lattice::~mv_lattice() {
-
+        
     }
 
     std::ostream& operator<<(std::ostream& str, const mv_lattice& obj) {
@@ -68,10 +68,10 @@ namespace mvspot {
 
     string mv_lattice::toString() const{
         string str = "";
-        if (this->nodes_.size() == 0)
+        if (this->nodes_->size() == 0)
             return str;
         for (set<mvspot::lattice_node*>::iterator it
-                = this->nodes_.begin(); it != this->nodes_.end(); it++) {
+                = this->nodes_->begin(); it != this->nodes_->end(); it++) {
             str += "{";
             int cnt = ((mvspot::lattice_node*)(*it))->getAbove_nodes()->size();
             if (cnt > 0){
@@ -87,7 +87,8 @@ namespace mvspot {
             }else
                 str += "}";
 
-            str += " <--above- " + ((mvspot::lattice_node*)(*it))->getName() + " -below--> {";
+            str += " <--above- " + ((mvspot::lattice_node*)(*it))->getName() + "=" +
+                    std::to_string(((mvspot::lattice_node*)(*it))->getValue()) + " -below--> {";
 
             cnt = ((mvspot::lattice_node*)(*it))->getBelow_nodes()->size();
             if ( cnt > 0){
@@ -127,7 +128,7 @@ namespace mvspot {
         
         if (this->below_nodes.count(target) > 0)//check if the target is already below the current node
             return true;
-        if (this->getValue() <= target->getValue())//check if the value of target is less than the current node
+        if (this->getValue() < target->getValue())//check if the value of target is less than the current node
             return false;
         else//add the target below of the current node
         {
@@ -144,10 +145,10 @@ namespace mvspot {
     }
 
     bool lattice_node::add_bellow_of(lattice_node * target) {
-
+        
         if(this->above_nodes.count(target) > 0)
             return true;
-        if(this->getValue() >= target->getValue())
+        if(this->getValue() > target->getValue())
             return false;
         else
         {

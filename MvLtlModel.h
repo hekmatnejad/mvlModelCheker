@@ -145,8 +145,8 @@ namespace mvspot {
             if (res != 0)
                 return (res > 0);
             else
-                return ((lhs->getName().compare(rhs->getName())) > 0);
-            //return true;
+                //return ((lhs->getName().compare(rhs->getName())) > 0);
+            return true;
         }
     };
     
@@ -167,53 +167,70 @@ namespace mvspot {
     public:
 
         mv_lattice(string top_name="T", float top_val=1.0, string buttom_name="F", float buttom_val=0.0){
-            //top_ = lattice_node("True", 1.0);
-            //buttom_= lattice_node("False", 0.0);
-            top_.setName(top_name);
-            top_.setValue(top_val);
-            buttom_.setName(buttom_name);
-            buttom_.setValue(buttom_val);
-            nodes_ = set<lattice_node*, node_compare>();
-            nodes_.insert(&top_);
-            nodes_.insert(&buttom_);
+            top_ = new lattice_node(top_name, top_val);
+            buttom_= new lattice_node(buttom_name, buttom_val);
+            //top_.setName(top_name);
+            //top_.setValue(top_val);
+            //buttom_.setName(buttom_name);
+            //buttom_.setValue(buttom_val);
+            nodes_ = new set<lattice_node*, node_compare>();
+            //join_irreducibles_ = new set<lattice_node*, node_compare>();
+            nodes_->insert(top_);
+            nodes_->insert(buttom_);
+        }
+
+        mv_lattice(lattice_node* top, lattice_node* buttom)
+        {
+            //cout << "<<<<\n";
+            top_ = top;
+            buttom_ = buttom;
+            nodes_ = new set<lattice_node*, node_compare>();
+            //join_irreducibles_ = new set<lattice_node*, node_compare>();
+            nodes_->insert(top_);
+            nodes_->insert(buttom_);
         }
         
         mv_lattice(const mv_lattice& orig){
-            std::cout << "This constructor need to be coded.\n";
+            //std::cout << "This constructor need to be coded.\n";
+            top_ = orig.getTop_();
+            buttom_ = orig.getButtom_();
+            nodes_ = orig.getNodes_();
+            //join_irreducibles_ = orig.get_join_irreducibles();
         }
         
         virtual ~mv_lattice();
+        
         string toString() const;
         friend std::ostream & operator<<(std::ostream & str, const mv_lattice & obj);
         void auto_update_values();
         
-        std::set<lattice_node*, node_compare>* get_join_irreducibles(){
-            //todo: first update then return
-            return &join_irreducibles_;
-        }
+        //std::set<lattice_node*, node_compare>* get_join_irreducibles() const{
+        //    //todo: first update then return
+        //    return join_irreducibles_;
+        //}
         
-        lattice_node* getButtom_() {
-            return &buttom_;
+        lattice_node* getButtom_() const{
+            return buttom_;
         }
 
-        std::set<lattice_node*, node_compare> * getNodes_() {
+        std::set<lattice_node*, node_compare> * getNodes_() const{
 
-            return &nodes_;
+            return nodes_;
         }
 
-        lattice_node* getTop_() {
-            return &top_;
+        lattice_node* getTop_() const{
+            return top_;
         }
 
     private:
-      lattice_node top_;  
-      lattice_node buttom_; 
+      lattice_node* top_;  
+      lattice_node* buttom_; 
       //std::set<lattice_node,lattice_node::node_compare> nodes_;
-      std::set<lattice_node*, node_compare> nodes_;
-      std::set<lattice_node*, node_compare> join_irreducibles_;
+      std::set<lattice_node*, node_compare>* nodes_;
+      //std::set<lattice_node*, node_compare>* join_irreducibles_;
         
     };
-
+/*
     class mv_interval{
     public:
         mv_interval(float low, float high): low_(low), high_(high){} 
@@ -230,7 +247,7 @@ namespace mvspot {
         float high_;
         mv_interval();
     };
-
+*/
 }
 
 

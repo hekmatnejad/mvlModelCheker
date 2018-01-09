@@ -38,6 +38,7 @@ OBJECTFILES= \
 	${OBJECTDIR}/MvLtlModel.o \
 	${OBJECTDIR}/Util.o \
 	${OBJECTDIR}/main.o \
+	${OBJECTDIR}/mv_interval.o \
 	${OBJECTDIR}/mvtwaproduct.o
 
 
@@ -79,6 +80,11 @@ ${OBJECTDIR}/main.o: main.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/main.o main.cpp
+
+${OBJECTDIR}/mv_interval.o: mv_interval.cpp
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/mv_interval.o mv_interval.cpp
 
 ${OBJECTDIR}/mvtwaproduct.o: mvtwaproduct.cpp
 	${MKDIR} -p ${OBJECTDIR}

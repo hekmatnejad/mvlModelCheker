@@ -46,6 +46,7 @@ Contributor(s):
       <itemPath>ModelGenerator.h</itemPath>
       <itemPath>MvLtlModel.h</itemPath>
       <itemPath>Util.h</itemPath>
+      <itemPath>mv_interval.h</itemPath>
       <itemPath>mvtwaproduct.h</itemPath>
       <itemPath>secondary.h</itemPath>
       <itemPath>sirle2018/sirle2018.h</itemPath>
@@ -60,6 +61,7 @@ Contributor(s):
       <itemPath>MvLtlModel.cpp</itemPath>
       <itemPath>Util.cpp</itemPath>
       <itemPath>main.cpp</itemPath>
+      <itemPath>mv_interval.cpp</itemPath>
       <itemPath>mvtwaproduct.cpp</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
@@ -118,6 +120,10 @@ Contributor(s):
       <item path="Util.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="mv_interval.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="mv_interval.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="mvtwaproduct.cpp" ex="false" tool="1" flavor2="0">
       </item>
@@ -180,6 +186,10 @@ Contributor(s):
       <item path="Util.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="mv_interval.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="mv_interval.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="mvtwaproduct.cpp" ex="false" tool="1" flavor2="0">
       </item>
