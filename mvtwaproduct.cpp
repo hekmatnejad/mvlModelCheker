@@ -22,18 +22,29 @@
 
 
 #include "mvtwaproduct.h"
-/*
-#include <spot/twa/twaproduct.hh>
+//#include <spot/twa/twaproduct.hh>
 #include <string>
 #include <cassert>
 #include <spot/misc/hashfunc.hh>
 #include <spot/kripke/kripke.hh>
-*/
+
+#include <spot/twaalgos/remfin.hh>
+#include <spot/twaalgos/alternation.hh>
+#include <spot/twa/twa.hh>
+#include <spot/twa/formula2bdd.hh>
+#include <spot/twaalgos/word.hh>
+
+
 using namespace std;
 
+//namespace mv
+//{
 namespace spot
 {
     using namespace spot;
+
+  static spot::bdd_dict_ptr shared_dict;  
+    
   ////////////////////////////////////////////////////////////
   // state_product
 
@@ -184,6 +195,7 @@ namespace spot
             bdd r = right_->cond();
             bdd current_cond = l & r;
 
+            cout << "--- in next_non_false " << current_cond << endl;
             if (current_cond != bddfalse)
               {
                 current_cond_ = current_cond;
@@ -237,6 +249,11 @@ namespace spot
       {
         // All the transitions of left_ iterator have the
         // same label, because it is a Kripke structure.
+          std::cout << "---> next_non_false_ :left: " << 
+                  bdd_to_formula(left_->cond(),shared_dict)<<endl;
+          std::cout << "---> next_non_false_ :right: " << 
+                  bdd_to_formula(right_->cond(),shared_dict)<<endl;
+          
         bdd l = left_->cond();
         assert(!right_->done());
         do
@@ -293,6 +310,7 @@ namespace spot
                                "share their bdd_dict");
     assert(get_dict() == right_->get_dict());
 
+    shared_dict = get_dict();
     // If one of the side is a Kripke structure, it is easier to deal
     // with (we don't have to fix the acceptance conditions, and
     // computing the successors can be improved a bit).
@@ -313,6 +331,7 @@ namespace spot
     copy_ap_of(left_);
     copy_ap_of(right_);
 
+    std::cout << "*** in -> twa_product::twa_product\n";
     assert(num_sets() == 0);
     auto left_num = left->num_sets();
     auto right_acc = right->get_acceptance() << left_num;
@@ -413,35 +432,37 @@ namespace spot
   }
 //--------------------------
   
-//  //twa.cc
-//  
-//    // Remove Fin-acceptance and alternation.
-//    const_twa_ptr remove_fin_maybe(const const_twa_ptr& a)
-//    {
-//      auto aa = std::dynamic_pointer_cast<const twa_graph>(a);
-//      if ((!aa || aa->is_existential()) && !a->acc().uses_fin_acceptance())
-//        return a;
-//      if (!aa)
-//        aa = make_twa_graph(a, twa::prop_set::all());
-//      return remove_fin(remove_alternation(aa));
-//    }
-//    
-//  twa_run_ptr
-//  twa::intersecting_run(const_twa_ptr other, bool from_other) const
-//  {
-//    auto a = shared_from_this();
-//    if (from_other)
-//      other = remove_fin_maybe(other);
-//    else
-//      a = remove_fin_maybe(a);
-//    auto run = otf_product(a, other)->accepting_run();
-//    if (!run)
-//      return nullptr;
-//    return run->project(from_other ? other : a);
-//  }
-}
-
-namespace mvspot{
+  //twa.cc
+  
+    // Remove Fin-acceptance and alternation.
+    const_twa_ptr remove_fin_maybe(const const_twa_ptr& a)
+    {
+      auto aa = std::dynamic_pointer_cast<const twa_graph>(a);
+      if ((!aa || aa->is_existential()) && !a->acc().uses_fin_acceptance())
+        return a;
+      if (!aa)
+        aa = make_twa_graph(a, twa::prop_set::all());
+      return remove_fin(remove_alternation(aa));
+    }
+    
+  twa_run_ptr
+  twa::intersecting_run(const_twa_ptr other, bool from_other) const 
+  {
+      cout << "*** in -> intersecting_run \n";
+    auto a = shared_from_this();
+    if (from_other)
+      other = remove_fin_maybe(other);
+    else
+      a = remove_fin_maybe(a);
+    auto run = mv::spot::otf_product(a, other)->accepting_run();
+    if (!run)
+      return nullptr;
+    return run->project(from_other ? other : a);
+  }
+}//spot namespace
+//}//mv namespace
+namespace mvspot
+{
     void mvtwaproduct::test_me_again(){
       std::cout << "******************\n" ;
     }    

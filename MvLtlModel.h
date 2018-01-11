@@ -25,7 +25,7 @@
 #include <spot/tl/parse.hh>
 #include <spot/twaalgos/translate.hh>
 #include <spot/twa/twaproduct.hh>
-//#include "mvtwaproduct.h"
+#include "mvtwaproduct.h"
 
 #include <spot/twaalgos/emptiness.hh>
 
@@ -39,7 +39,6 @@
 //#include "mvkripkegraph.h"
 #include <spot/parseaut/public.hh>
 #include <spot/twa/bddprint.hh>
-#include <spot/twa/twagraph.hh>
 
 
 

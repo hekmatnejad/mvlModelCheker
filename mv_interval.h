@@ -19,13 +19,14 @@ namespace mvspot
 {
 class mv_interval {
 public:
-    mv_interval();
-    mv_interval(float low, float high);
-    mv_interval(lattice_node* intervals, int size) throw();
+    mv_interval(string name);
+    mv_interval(string name, float low, float high);
+    mv_interval(string name, lattice_node* intervals, int size) throw();
     mv_interval(const mv_interval& orig);
     virtual ~mv_interval();
     void add_interval(string symbol, float low, float high);
     mv_interval* get_interval(string symbol);
+    mv_interval* get_interval(float low, float high);
 
     lattice_node* getTop();
     lattice_node* getButtom();
@@ -36,6 +37,17 @@ public:
     mv_interval* not_mv(mv_interval* given);
     void negate_mv(mv_interval* given);
     mv_interval* psi_mv(mv_interval* base, mv_interval* given);
+    string get_as_str();
+    string get_as_str(float low, float high);
+    std::pair<float,float> get_as_pair();
+
+    string getName() const {
+        return name_;
+    }
+
+    void setName_(string name) {
+        this->name_ = name;
+    }
 
     int getInt_size_() const {
         return int_size_;
@@ -54,6 +66,8 @@ public:
     }
     
 private:
+    bool is_TO_lattice_container_ = false;
+    string name_ = "";
     lattice_node* intervals_=0;
     lattice_node* top_=0;
     lattice_node* buttom_=0;
@@ -64,7 +78,7 @@ private:
 };
 
 void test_intervals();
-mv_interval* create_interval_set(string prefix, int num_nodes);
+mv_interval* create_interval_set(string name, string prefix, int num_nodes);
 
 class mv_exception: public exception
 {
@@ -78,6 +92,16 @@ public:
 private:
     string msg_;
 }; 
+
+class interval_bdd {
+public:
+    interval_bdd(bdd_dict_ptr dict) : dict_(dict){
+    }
+    
+    mv_interval apply_and(bdd base, bdd model);
+private:
+    bdd_dict_ptr dict_;
+};
 
 }
 #endif /* MV_INTERVAL_H */
