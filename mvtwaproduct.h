@@ -41,9 +41,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 #include <spot/twa/twa.hh>
 #include <spot/misc/fixpool.hh>
+//#include "mv_interval.h"
+
+
 namespace mv
 {
 namespace spot
@@ -108,7 +110,7 @@ namespace spot
     /// \param right The right automata in the product.
     /// Do not be fooled by these arguments: a product is commutative.
     twa_product(const ::spot::const_twa_ptr& left, const ::spot::const_twa_ptr& right);
-
+    //twa_product(const ::spot::const_twa_ptr& left, const ::spot::const_twa_ptr& right, mvspot::mv_interval* intervals);
     virtual ~twa_product();
 
     virtual const ::spot::state* get_init_state() const override;
@@ -129,6 +131,8 @@ namespace spot
     ::spot::const_twa_ptr right_;
     bool left_kripke_;
     ::spot::fixed_size_pool pool_;
+    mvspot::mv_interval* intervals_;
+
 
   private:
     // Disallow copy.
@@ -154,6 +158,7 @@ namespace spot
   {
       std::cout << "*** in -> otf_product\n";
     return std::make_shared<::spot::twa_product>(left, right);
+    //return std::make_shared<mvspot::mv_twa_product>(left, right, nullptr);
   }
 
   /// \brief on-the-fly TGBA product with forced initial states
@@ -167,18 +172,4 @@ namespace spot
   }
 }//spot namespace
 }//mv namespace
-namespace mvspot
-{
-    class mvtwaproduct{
-
-    public:
-        mvtwaproduct(){};
-        virtual ~mvtwaproduct(){};
-        
-        void test_me_again();
-        //{ std::cout << "******************\n" ;  }
-    private:
-        
-    };
-}
 #endif /* MVTWAPRODUCT_HH */

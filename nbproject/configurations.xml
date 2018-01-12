@@ -48,7 +48,6 @@ Contributor(s):
       <itemPath>Util.h</itemPath>
       <itemPath>mv_interval.h</itemPath>
       <itemPath>mvtwaproduct.h</itemPath>
-      <itemPath>secondary.h</itemPath>
       <itemPath>sirle2018/sirle2018.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles"
@@ -131,8 +130,6 @@ Contributor(s):
       </item>
       <item path="ocean_triangulate.dot" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="secondary.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="sirle2018/sirle2018.h" ex="false" tool="3" flavor2="0">
       </item>
     </conf>
@@ -152,7 +149,7 @@ Contributor(s):
           <developmentMode>5</developmentMode>
           <standard>8</standard>
           <commandlineTool>gcc</commandlineTool>
-          <commandLine>-lspot -lbddx</commandLine>
+          <commandLine>-lspot -lbddx -std=c++0x</commandLine>
         </ccTool>
         <fortranCompilerTool>
           <developmentMode>5</developmentMode>
@@ -196,8 +193,6 @@ Contributor(s):
       <item path="mvtwaproduct.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="ocean_triangulate.dot" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="secondary.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="sirle2018/sirle2018.h" ex="false" tool="3" flavor2="0">
       </item>

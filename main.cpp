@@ -32,8 +32,8 @@
 #include <spot/twa/taatgba.hh>
 //#include <spot/tl/dot.hh>
 //#include <spot/taalgos/dot.hh>
-#include "secondary.h"
-#include "mv_interval.h"
+//#include "secondary.h"
+//#include "mv_interval.h"
 using namespace std;
 
 #define PRINT_DEBUG_DATA 1
@@ -47,7 +47,7 @@ static spot::kripke_graph_ptr kg_model;
 static spot::twa_graph_ptr aut_model;
 static spot::bdd_dict_ptr shared_dict = spot::make_bdd_dict();
 float CERTAINTY_THREASHOLD = 1;
-
+static mvspot::mv_interval* shared_intervals = new mvspot::mv_interval("q");
 /*
  * 
  */
@@ -366,9 +366,9 @@ public:
         return new marine_robot_state(state_num, 0, true, org_model_, itv);
     }
 
-    void recycle(twa_succ_iterator* aut_succ[], twa_graph_ptr org_model, bdd cond) {
+    void recycle(twa_succ_iterator* aut_succ[], spot::twa_graph_ptr org_model, bdd cond) {
         org_model_ = org_model;
-        aut_succ_ = new twa_succ_iterator*[NUM_CARS];
+        aut_succ_ = new spot::twa_succ_iterator*[NUM_CARS];
         for (int i = 0; i < NUM_CARS; i++)
             aut_succ_[i] = aut_succ[i];
         delete[] aut_succ;
@@ -376,7 +376,12 @@ public:
     }
 };
 
+//initialize the shared variable for interval related functions
+mvspot::mv_interval* spot::twa::shared_intervals_ = shared_intervals;//new mvspot::mv_interval("q");
+mvspot::mv_interval* mvspot::interval_bdd::shared_intervals_ = spot::twa::shared_intervals_;//new mvspot::mv_interval("q");
+
 class marine_robot_kripke : public spot::kripke {
+//class marine_robot_kripke : public mvspot::mv_kripke {
 private:
 
     bdd goal_;
@@ -394,7 +399,10 @@ public:
             const spot::twa_graph_ptr org_model, const unsigned init_state[],
             const list<string> lst_str_loc[], mvspot::mv_interval* intervals)
     : spot::kripke(d), str_certainty_(certainty), org_model_(org_model) {
+    //: mvspot::mv_kripke(intervals, d), str_certainty_(certainty), org_model_(org_model) {
         intervals_ = intervals;
+        shared_intervals_ = intervals;
+        mvspot::interval_bdd::shared_intervals_ = intervals;
         //goal_ = bdd_ithvar(register_ap("goal"));
         //certainty_ = bdd_ithvar(register_ap(certainty)); //registers the requested certainty 
         lst_str_loc_ = new list<string>[NUM_CARS];
@@ -439,7 +447,7 @@ public:
         mvspot::mv_interval* itv = nullptr;
         for (int i = 0; i < NUM_CARS; i++) {
             init_state[i] = init_state_[i];
-            internal::twa_succ_iterable k = org_model_->succ(org_model_->state_from_number(init_state_[i]));
+            spot::internal::twa_succ_iterable k = org_model_->succ(org_model_->state_from_number(init_state_[i]));
             if ((*k.begin())->cond() != bddfalse) {
                 mvspot::mv_interval* tmp_itv = convert_formula_to_interval((*k.begin())->cond(), intervals_);
                 if(tmp_itv!=nullptr && itv==nullptr)
@@ -583,24 +591,24 @@ void model_4(string formula) {
     spot::twa_graph_ptr af = spot::translator(shared_dict).run(f);
     //Util::write2File("new_formula.dot", af);
     
-    mvspot::mv_interval* intervals = mvspot::create_interval_set("certainty", "q", 5);
-    intervals->add_interval("q=[1,1]",1,1);
-    intervals->add_interval("q=[0.5,1]",0.5,1);
-    intervals->add_interval("q=[0.5,0.5]",0.5,0.5);
-    intervals->add_interval("q=[0,0.5]",0,0.5);
-    intervals->add_interval("q=[0,0]",0,0);
-    intervals->add_interval("q=[0,1]",0,1);
+    //mvspot::mv_interval* intervals = mvspot::create_interval_set("certainty", "q", 5);
+    mvspot::mv_interval* shared_intervals = mvspot::create_interval_set("certainty", "q", 5);
+    shared_intervals->add_interval("q=[1,1]",1,1);
+    shared_intervals->add_interval("q=[0.5,1]",0.5,1);
+    shared_intervals->add_interval("q=[0.5,0.5]",0.5,0.5);
+    shared_intervals->add_interval("q=[0,0.5]",0,0.5);
+    shared_intervals->add_interval("q=[0,0]",0,0);
+    shared_intervals->add_interval("q=[0,1]",0,1);
 
-    cout << "\n\nusing TO Lattice:\n" << *intervals->getTo_lattice_() << endl<<endl;
-    for(std::pair<string,mvspot::mv_interval*> it : *intervals->getMap_intervals()){
+    cout << "\n\nusing TO Lattice:\n" << *shared_intervals->getTo_lattice_() << endl<<endl;
+    for(std::pair<string,mvspot::mv_interval*> it : *shared_intervals->getMap_intervals()){
         
         cout << "interval: " << it.first << "\n" << *(it.second->getTo_lattice_()) << endl;
     }
     //if(true) return;
-    
     // Find a run of or marine_robot_kripke that intersects af.
     auto k = std::make_shared<marine_robot_kripke>(shared_dict, str_certainty_ap, aut_model,
-            init_state, lst_loc, intervals);
+            init_state, lst_loc, shared_intervals);
 
     cout << "accepting condition <model>: " << k->acc()<< " and formulas:\n";
     for(spot::formula f:  k->ap())

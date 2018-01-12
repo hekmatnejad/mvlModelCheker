@@ -15,8 +15,9 @@
 #define SECONDARY_H
 
 #include "MvLtlModel.h"
+#include "mvtwaproduct.h"
 
-
+using namespace spot;
  /**************************************************************************
  
    allsat handler for checking that all assignmenlsatBDD;

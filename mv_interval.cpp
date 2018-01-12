@@ -11,9 +11,11 @@
  * Created on January 8, 2018, 2:01 AM
  */
 
+#include "MvLtlModel.h"
 #include <spot/twa/taatgba.hh>
+#include <spot/twa/formula2bdd.hh>
 
-#include "mv_interval.h"
+//#include "mv_interval.h"
 namespace mvspot
 {
     
@@ -98,6 +100,27 @@ mv_interval* mv_interval::get_interval(float low, float high){
     return ((*map_all_intervals_)[std::make_pair(low,high)]);
 }
 
+mv_interval* mv_interval::parse_string_to_interval(string f){
+    string l, r;
+    l = f.substr(f.find_first_of("[") + 1, f.find_first_of(",") - f.find_first_of("[") - 1);
+    r = f.substr(f.find_first_of(",") + 1, f.find_first_of("]") - f.find_first_of(",") - 1);
+    std::string::iterator end_pos = std::remove(l.begin(), l.end(), ' ');
+    l.erase(end_pos, l.end());
+    end_pos = std::remove(r.begin(), r.end(), ' ');
+    r.erase(end_pos, r.end());
+    float low = std::stof(l);
+    float high = std::stof(r);
+    if((*map_intervals_)[f] == 0){
+        if (get_interval(low, high) == 0){
+            //return new mv_interval(f.substr(0,f.find('=')),low, high);
+            return new mv_interval(f,low, high);
+        }
+    }
+
+    return get_interval(low, high);
+}
+
+
 lattice_node* mv_interval::getTop(){
     return top_;
 }
@@ -107,7 +130,7 @@ lattice_node* mv_interval::getButtom(){
 }
 
 mv_interval::mv_interval(const mv_interval& orig) {
-    cout << "???????????\n\n";
+    cout << "in mv_interval::mv_interval copy constructor\n\n";
     is_TO_lattice_container_ = orig.is_TO_lattice_container_;
     intervals_ = orig.intervals_;
     name_ = orig.name_;
@@ -250,6 +273,47 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
         return (*map_all_intervals_)[std::make_pair(new_low, new_high)];
     
 }
+
+//--------------------------------------------------------//
+
+    static string convert_to_interval(spot::formula& f){
+        return f.ap_name();//note: this will remove the extra quotation marks around symbols
+    }
+
+    //static definition
+    std::map<int,mv_interval*>* mvspot::interval_bdd::map_interval_base_ = new std::map<int,mv_interval*>();
+    std::map<int,mv_interval*>* mvspot::interval_bdd::map_interval_model_ = new std::map<int,mv_interval*>();
+
+    mv_interval* interval_bdd::apply_and(bdd base, bdd model,spot::bdd_dict_ptr dict_){
+        
+        //cout << *shared_intervals_->getTo_lattice_()<< endl;
+        spot::formula f_base = bdd_to_formula(base, dict_);
+        spot::formula f_model = bdd_to_formula(model, dict_);
+        
+        auto aps = std::unique_ptr<spot::atomic_prop_set>(spot::atomic_prop_collect(f_base));
+        mvspot::mv_interval* itv_base;
+        mvspot::mv_interval* itv_model;
+        for (auto pi: *aps)
+        {
+            string str_f = convert_to_interval(pi);
+            //cout << ">>>> pi: " << pi << " " << convert_to_interval(pi).find('=') << endl;
+            std::size_t found = str_f.find('=');
+            if(found!=std::string::npos){
+                std::cout << "parsed: " << str_f << " to " << shared_intervals_->parse_string_to_interval(str_f)->getName() << endl;
+            }
+            int p = dict_->var_map[pi];//bdd number //register_proposition(pi);
+            if(map_interval_base_->find(p) == map_interval_base_->end()){
+                //map_interval_base_[pi] = ;
+            }
+            //else{
+                
+            //}
+            //cout << ">>>>>> p: " << p << " pi: " << pi << " f: " << dict_->bdd_map[p].f << endl;
+        }
+        
+        mv_interval* res;
+        return res;
+    }
 
 
 //--------------------------------------------------------//

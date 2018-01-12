@@ -21,7 +21,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#include "mvtwaproduct.h"
 //#include <spot/twa/twaproduct.hh>
 #include <string>
 #include <cassert>
@@ -33,17 +32,20 @@
 #include <spot/twa/twa.hh>
 #include <spot/twa/formula2bdd.hh>
 #include <spot/twaalgos/word.hh>
+#include "mvtwaproduct.h"
+#include "mv_interval.h"
 
 
 using namespace std;
 
-//namespace mv
-//{
+//namespace mv{
+
 namespace spot
 {
     using namespace spot;
 
   static spot::bdd_dict_ptr shared_dict;  
+  static mvspot::mv_interval* shared_intervals;
     
   ////////////////////////////////////////////////////////////
   // state_product
@@ -249,11 +251,16 @@ namespace spot
       {
         // All the transitions of left_ iterator have the
         // same label, because it is a Kripke structure.
-          std::cout << "---> next_non_false_ :left: " << 
-                  bdd_to_formula(left_->cond(),shared_dict)<<endl;
-          std::cout << "---> next_non_false_ :right: " << 
-                  bdd_to_formula(right_->cond(),shared_dict)<<endl;
-          
+          //std::cout << "---> next_non_false_ :left: " << 
+          //        bdd_to_formula(left_->cond(),shared_dict)<<endl;
+          //std::cout << "---> next_non_false_ :right: " << 
+          //        bdd_to_formula(right_->cond(),shared_dict)<<endl;
+        
+        //mvspot::interval_bdd ibdd(shared_dict);
+        mvspot::mv_interval* int_res = mvspot::interval_bdd::
+                apply_and(right_->cond(), left_->cond(), shared_dict);
+        //cout << "left & right = " << int_res->get_as_str() << endl;
+        
         bdd l = left_->cond();
         assert(!right_->done());
         do
@@ -300,6 +307,16 @@ namespace spot
   ////////////////////////////////////////////////////////////
   // twa_product
 
+  
+    //twa_product::twa_product(const const_twa_ptr& left,
+    //                         const const_twa_ptr& right, mvspot::mv_interval* intervals)
+    //: twa(left->get_dict()), left_(left), right_(right),
+    //  pool_(sizeof(state_product))
+//    : twa_product(left, right), intervals_(interval)
+    //{
+    //}
+
+  
   twa_product::twa_product(const const_twa_ptr& left,
                              const const_twa_ptr& right)
     : twa(left->get_dict()), left_(left), right_(right),
@@ -327,10 +344,12 @@ namespace spot
       {
         left_kripke_ = false;
       }
-
+    
     copy_ap_of(left_);
     copy_ap_of(right_);
-
+    
+    //mvspot::mv_kripke* mvk = dynamic_cast<mvspot::mv_kripke*>(&left);
+    
     std::cout << "*** in -> twa_product::twa_product\n";
     assert(num_sets() == 0);
     auto left_num = left->num_sets();
@@ -449,6 +468,8 @@ namespace spot
   twa::intersecting_run(const_twa_ptr other, bool from_other) const 
   {
       cout << "*** in -> intersecting_run \n";
+      cout << "\n\nusing TO Lattice:\n" << *shared_intervals_->getTo_lattice_() << endl<<endl;
+
     auto a = shared_from_this();
     if (from_other)
       other = remove_fin_maybe(other);
@@ -461,9 +482,13 @@ namespace spot
   }
 }//spot namespace
 //}//mv namespace
-namespace mvspot
-{
-    void mvtwaproduct::test_me_again(){
-      std::cout << "******************\n" ;
-    }    
+/*
+namespace mvspot{
+  mv_twa_product::mv_twa_product(const spot::const_twa_ptr& left, const spot::const_twa_ptr& right, mvspot::mv_interval* intervals=0)
+    : twa_product(left, right)
+  {
+      intervals_ = intervals;
+  }
+    
 }
+ * */

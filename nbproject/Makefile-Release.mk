@@ -46,8 +46,8 @@ OBJECTFILES= \
 CFLAGS=-lspot -lbddx
 
 # CC Compiler Flags
-CCFLAGS=-lspot -lbddx
-CXXFLAGS=-lspot -lbddx
+CCFLAGS=-lspot -lbddx -std=c++0x
+CXXFLAGS=-lspot -lbddx -std=c++0x
 
 # Fortran Compiler Flags
 FFLAGS=

@@ -25,7 +25,7 @@
 #include <spot/tl/parse.hh>
 #include <spot/twaalgos/translate.hh>
 #include <spot/twa/twaproduct.hh>
-#include "mvtwaproduct.h"
+//#include "mvtwaproduct.h"
 
 #include <spot/twaalgos/emptiness.hh>
 
@@ -39,19 +39,39 @@
 //#include "mvkripkegraph.h"
 #include <spot/parseaut/public.hh>
 #include <spot/twa/bddprint.hh>
-
-
+//#include "mv_interval.h"
+#include <spot/twa/bdddict.hh>
+#include <spot/tl/apcollect.hh>
+#include <bddx.h>
 
 
 using namespace std;
-using namespace spot;
+//using namespace spot;
+
+
+namespace spot
+{
+//  class mv_twa;
+//  typedef std::shared_ptr<mv_twa> mv_twa_ptr;
+//  typedef std::shared_ptr<const mv_twa> const_mv_twa_ptr;
+//
+//  class mv_twa_graph;
+//  typedef std::shared_ptr<const mv_twa_graph> const_mv_twa_graph_ptr;
+//  typedef std::shared_ptr<mv_twa_graph> mv_twa_graph_ptr;
+//
+//  class mv_twa_product;
+//  typedef std::shared_ptr<const mv_twa_product> const_mv_twa_product_ptr;
+//  typedef std::shared_ptr<mv_twa_product> mv_twa_product_ptr;
+}
+
+
 
 namespace mvspot {
     template<class T>
     string * set2string(set<T> s);
 
 
-    class mv_ltl_model {
+    class mv_ltl_model : public std::enable_shared_from_this<mv_ltl_model>{
     public:
         mv_ltl_model();
         mv_ltl_model(const mv_ltl_model& orig);
@@ -64,7 +84,7 @@ namespace mvspot {
     
     //=================================================================//
 
-    class lattice_node{
+    class lattice_node : public std::enable_shared_from_this<lattice_node> {
     public:
 
         //std::set<Node, bool (*)(const Node&, const Node&)> nodeSet(compareNode);
@@ -162,7 +182,7 @@ namespace mvspot {
             }
 #endif        
             
-    class mv_lattice {
+    class mv_lattice : public std::enable_shared_from_this<mv_lattice> {
     public:
 
         mv_lattice(string top_name="T", float top_val=1.0, string buttom_name="F", float buttom_val=0.0){
@@ -247,7 +267,163 @@ namespace mvspot {
         mv_interval();
     };
 */
-}
+    
+class mv_interval : public std::enable_shared_from_this<mv_interval> {
+public:
+    mv_interval(string name);
+    mv_interval(string name, float low, float high);
+    mv_interval(string name, lattice_node* intervals, int size) throw();
+    mv_interval(const mv_interval& orig);
+    virtual ~mv_interval();
+    void add_interval(string symbol, float low, float high);
+    mv_interval* parse_string_to_interval(string symbol);
+    mv_interval* get_interval(float low, float high);
+
+    lattice_node* getTop();
+    lattice_node* getButtom();
+    //lattice operators
+    float complement_mv(float given);
+    mv_interval* join_mv(mv_interval* left, mv_interval* right);
+    mv_interval* meet_mv(mv_interval* left, mv_interval* right);
+    mv_interval* not_mv(mv_interval* given);
+    void negate_mv(mv_interval* given);
+    mv_interval* psi_mv(mv_interval* base, mv_interval* given);
+    string get_as_str();
+    string get_as_str(float low, float high);
+    std::pair<float,float> get_as_pair();
+
+    string getName() const {
+        return name_;
+    }
+
+    void setName_(string name) {
+        this->name_ = name;
+    }
+
+    int getInt_size_() const {
+        return int_size_;
+    }
+
+    mv_lattice* getTo_lattice_() const {
+        return to_lattice_;
+    }
+
+    std::map<std::pair<float,float>,mv_interval*>* getMap_all_intervals(){
+        return map_all_intervals_;
+    }
+
+    std::map<string,mv_interval*>* getMap_intervals(){
+        return map_intervals_;
+    }
+    
+private:
+    bool is_TO_lattice_container_ = false;
+    string name_ = "";
+    lattice_node* intervals_=0;
+    lattice_node* top_=0;
+    lattice_node* buttom_=0;
+    int int_size_=0;
+    mv_lattice* to_lattice_=0;
+    std::map<string,mv_interval*>* map_intervals_=0;//intervals that are added by mv_interval::add_interval
+    std::map<std::pair<float,float>,mv_interval*>* map_all_intervals_=0;
+};
+
+void test_intervals();
+mv_interval* create_interval_set(string name, string prefix, int num_nodes);
+
+class mv_exception: public exception
+{
+public:
+    mv_exception(string msg):msg_(msg){}
+    
+    virtual const char* what() const throw()
+    {
+        return "My exception happened";
+    }
+private:
+    string msg_;
+}; 
+
+class interval_bdd : public std::enable_shared_from_this<interval_bdd> {
+public:
+    static std::map<int,mv_interval*>* map_interval_base_;
+    static std::map<int,mv_interval*>* map_interval_model_;
+    static mv_interval* shared_intervals_;
+    interval_bdd(spot::bdd_dict_ptr dict){// : dict_(dict){
+    }
+    
+    static mv_interval* apply_and(bdd base, bdd model, spot::bdd_dict_ptr dict_);
+    
+private:
+    //static bdd_dict_ptr dict_;
+};
+    
+
+
+/*
+class SPOT_API mv_twa : public spot::twa{
+public:
+        mv_twa(const spot::bdd_dict_ptr& d) :
+        twa(d) {
+        }
+    
+};  
+
+class SPOT_API mv_twa_graph : public spot::twa{
+public:
+        mv_twa_graph(const spot::bdd_dict_ptr& dict) :
+        twa(dict) {
+        }
+    
+};  
+
+
+class SPOT_API mv_twa_product final: public spot::twa_product{
+public:
+  mv_twa_product(const spot::const_twa_ptr& left, const spot::const_twa_ptr& right,
+                    mvspot::mv_interval* intervals);
+protected:
+  const spot::state* left_init_;
+  const spot::state* right_init_;
+  mvspot::mv_interval* intervals_;
+};
+
+class SPOT_API mv_fair_kripke: public mv_twa , public spot::fair_kripke{
+  public:
+    mv_fair_kripke(const spot::bdd_dict_ptr& d)
+      : mv_twa(d), fair_kripke(d)
+      {
+      }
+
+    /// \brief The condition that label the state \a s.
+    ///
+    /// This should be a conjunction of atomic propositions.
+    //virtual bdd state_condition(const spot::state* s) const = 0;
+
+    /// \brief The acceptance mark that labels state \a s.
+    //virtual spot::acc_cond::mark_t
+    //  state_acceptance_mark(const spot::state* s) const = 0;    
+};
+
+
+//namespace mvspot{
+class mv_kripke : public mv_fair_kripke {
+public:
+        mv_kripke(mv_interval* intervals, const spot::bdd_dict_ptr& d) :
+        mv_fair_kripke(d){
+            intervals_ = intervals;
+        }
+
+    mv_interval* getIntervals(){
+        return intervals_;
+    }
+private:
+    mv_interval* intervals_;
+};
+//}    
+*/
+
+}//mvspot namespace
 
 
 

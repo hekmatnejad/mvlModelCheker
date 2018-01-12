@@ -15,93 +15,12 @@
 #define MV_INTERVAL_H
 
 #include "MvLtlModel.h"
+//#include <spot/tl/apcollect.hh>
+//#include <bddx.h>
+//#include <spot/twa/bdddict.hh>
 namespace mvspot
 {
-class mv_interval {
-public:
-    mv_interval(string name);
-    mv_interval(string name, float low, float high);
-    mv_interval(string name, lattice_node* intervals, int size) throw();
-    mv_interval(const mv_interval& orig);
-    virtual ~mv_interval();
-    void add_interval(string symbol, float low, float high);
-    mv_interval* get_interval(string symbol);
-    mv_interval* get_interval(float low, float high);
-
-    lattice_node* getTop();
-    lattice_node* getButtom();
-    //lattice operators
-    float complement_mv(float given);
-    mv_interval* join_mv(mv_interval* left, mv_interval* right);
-    mv_interval* meet_mv(mv_interval* left, mv_interval* right);
-    mv_interval* not_mv(mv_interval* given);
-    void negate_mv(mv_interval* given);
-    mv_interval* psi_mv(mv_interval* base, mv_interval* given);
-    string get_as_str();
-    string get_as_str(float low, float high);
-    std::pair<float,float> get_as_pair();
-
-    string getName() const {
-        return name_;
-    }
-
-    void setName_(string name) {
-        this->name_ = name;
-    }
-
-    int getInt_size_() const {
-        return int_size_;
-    }
-
-    mv_lattice* getTo_lattice_() const {
-        return to_lattice_;
-    }
-
-    std::map<std::pair<float,float>,mv_interval*>* getMap_all_intervals(){
-        return map_all_intervals_;
-    }
-
-    std::map<string,mv_interval*>* getMap_intervals(){
-        return map_intervals_;
-    }
-    
-private:
-    bool is_TO_lattice_container_ = false;
-    string name_ = "";
-    lattice_node* intervals_=0;
-    lattice_node* top_=0;
-    lattice_node* buttom_=0;
-    int int_size_=0;
-    mv_lattice* to_lattice_=0;
-    std::map<string,mv_interval*>* map_intervals_=0;//intervals that are added by mv_interval::add_interval
-    std::map<std::pair<float,float>,mv_interval*>* map_all_intervals_=0;
-};
-
-void test_intervals();
-mv_interval* create_interval_set(string name, string prefix, int num_nodes);
-
-class mv_exception: public exception
-{
-public:
-    mv_exception(string msg):msg_(msg){}
-    
-    virtual const char* what() const throw()
-    {
-        return "My exception happened";
-    }
-private:
-    string msg_;
-}; 
-
-class interval_bdd {
-public:
-    interval_bdd(bdd_dict_ptr dict) : dict_(dict){
-    }
-    
-    mv_interval apply_and(bdd base, bdd model);
-private:
-    bdd_dict_ptr dict_;
-};
+using namespace std;
 
 }
 #endif /* MV_INTERVAL_H */

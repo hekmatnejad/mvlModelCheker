@@ -19,6 +19,8 @@
 #include <istream>
 #include <iostream>
 #include <fstream>
+#include "mvtwaproduct.h"
+#include <spot/parseaut/public.hh>
 
 class Util {
 public:
@@ -26,7 +28,7 @@ public:
     Util(const Util& orig);
     virtual ~Util();
     
-static bool write2File(string fName, const const_twa_ptr& g, const char* options= nullptr){
+static bool write2File(string fName, const spot::const_twa_ptr& g, const char* options= nullptr){
     std:ofstream outFile;
     outFile.open(fName.c_str());
     if(!outFile.is_open())
@@ -36,7 +38,7 @@ static bool write2File(string fName, const const_twa_ptr& g, const char* options
     return true;
 }
 
-static bool write2FileAsHoa(string fName, const const_twa_ptr& g, const char* options= nullptr){
+static bool write2FileAsHoa(string fName, const spot::const_twa_ptr& g, const char* options= nullptr){
     std:ofstream outFile;
     outFile.open(fName.c_str());
     if(!outFile.is_open())
@@ -68,7 +70,7 @@ static stringstream readFromFile(string fName){
 //0 t
 //recognized: HOA, LBTT, DSTAR, or neverclaim.
 static spot::parsed_aut_ptr readAutFromFile(string fName, bool kripke_graph=true, spot::bdd_dict_ptr dict=spot::make_bdd_dict()){
-    automaton_parser_options opt;
+    spot::automaton_parser_options opt;
     opt.want_kripke=kripke_graph;
     opt.ignore_abort=false;
     opt.debug=false;
