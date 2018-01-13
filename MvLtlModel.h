@@ -353,6 +353,9 @@ public:
     }
     
     static mv_interval* apply_and(bdd base, bdd model, spot::bdd_dict_ptr dict_);
+    static mv_interval* symbol_formual_to_interval(string formula);
+    static spot::formula simplify_conjuctive_formula(spot::formula f, const spot::bdd_dict_ptr& d);
+    static spot::formula prepare_apply_and(spot::formula f_base, spot::formula f_model, spot::bdd_dict_ptr dict_);
     
 private:
     //static bdd_dict_ptr dict_;

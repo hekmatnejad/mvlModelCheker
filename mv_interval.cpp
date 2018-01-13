@@ -15,6 +15,7 @@
 #include <spot/twa/taatgba.hh>
 #include <spot/twa/formula2bdd.hh>
 
+using namespace spot;
 //#include "mv_interval.h"
 namespace mvspot
 {
@@ -279,38 +280,285 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
     static string convert_to_interval(spot::formula& f){
         return f.ap_name();//note: this will remove the extra quotation marks around symbols
     }
+    
+  bdd
+  replace_formula_to_bdd(formula f, formula base, formula model, bool negate, const bdd_dict_ptr& d, void* owner)
+  {
+    auto recurse = [base, model, negate, &d, owner](formula f)
+      {
+        return replace_formula_to_bdd(f, base, model, negate, d, owner);
+      };
+    switch (f.kind())
+      {
+      case op::ff:
+        return bddfalse;
+      case op::tt:
+        return bddtrue;
+      case op::eword:
+      case op::Star:
+      case op::FStar:
+      case op::F:
+      case op::G:
+      case op::X:
+      case op::Closure:
+      case op::NegClosure:
+      case op::NegClosureMarked:
+      case op::U:
+      case op::R:
+      case op::W:
+      case op::M:
+      case op::UConcat:
+      case op::EConcat:
+      case op::EConcatMarked:
+      case op::Concat:
+      case op::Fusion:
+      case op::AndNLM:
+      case op::OrRat:
+      case op::AndRat:
+        SPOT_UNIMPLEMENTED();
+      case op::ap:
+        if(f == model){
+            if(negate)
+                return !bdd_ithvar(d->register_proposition(base, owner));
+            else
+                return bdd_ithvar(d->register_proposition(base, owner));
+        }
+        else
+            return bdd_ithvar(d->register_proposition(f, owner));
+      case op::Not:
+        return bdd_not(recurse(f[0]));
+      case op::Xor:
+        return bdd_apply(recurse(f[0]), recurse(f[1]), bddop_xor);
+      case op::Implies:
+        return bdd_apply(recurse(f[0]), recurse(f[1]), bddop_imp);
+      case op::Equiv:
+        return bdd_apply(recurse(f[0]), recurse(f[1]), bddop_biimp);
+      case op::And:
+      case op::Or:
+        {
+          int o = bddop_and;
+          bdd res = bddtrue;
+          if (f.is(op::Or))
+            {
+              o = bddop_or;
+              res = bddfalse;
+            }
+          unsigned s = f.size();
+          for (unsigned n = 0; n < s; ++n)
+            res = bdd_apply(res, recurse(f[n]), o);
+          return res;
+        }
+      }
+    SPOT_UNREACHABLE();
+    return bddfalse;
+  }
 
+    mv_interval* interval_bdd::symbol_formual_to_interval(string formula){
+        return shared_intervals_->parse_string_to_interval(formula);
+    }
+
+    spot::formula interval_bdd::simplify_conjuctive_formula(spot::formula f, const bdd_dict_ptr& d) {
+        if (f.kind() == op::ap)
+            return f;
+        if (f.kind() != op::And)
+            return f;
+        //std::cout << "******************\n";
+        std::map<string, mvspot::mv_interval*> map_itv = std::map<string, mvspot::mv_interval*>();
+        std::vector<formula> v= std::vector<formula>();
+        unsigned s = f.size();
+        for (unsigned n = 0; n < s; ++n) {
+            if (f[n].kind() == op::ap && f[n].ap_name().find('=') != std::string::npos) {
+                //std::cout << f[n] << endl;
+                mvspot::mv_interval* itv;
+                if (map_itv.find(f[n].ap_name().substr(0, f[n].ap_name().find('='))) == map_itv.end()) {
+                    itv = shared_intervals_->parse_string_to_interval(f[n].ap_name());
+                    map_itv[f[n].ap_name().substr(0, f[n].ap_name().find('='))] = itv;
+                } else{
+                    itv = shared_intervals_->parse_string_to_interval(f[n].ap_name());
+                    itv = map_itv[f[n].ap_name().substr(0, f[n].ap_name().find('='))]->meet_mv(
+                            map_itv[f[n].ap_name().substr(0, f[n].ap_name().find('='))], itv);
+                }
+            }else{
+                v.emplace_back(f[n]);
+            }
+        }
+        for(std::map<string, mvspot::mv_interval*>::iterator it = map_itv.begin(); it != map_itv.end(); ++it){
+            //spot::formula f_new = spot::formula::ap((*it).first);
+            spot::formula f_new = spot::formula::ap((*it).first+"="+((*it).second)->get_as_str());
+            d->register_proposition(f_new,nullptr);
+            v.emplace_back(f_new);
+        }
+        return spot::formula::And(v);
+    }
+
+
+
+
+
+  
+  spot::formula
+  replace_model_with_base(formula f, formula base, formula model, bool negate, const bdd_dict_ptr& d, void* owner)
+  {
+    auto recurse = [base, model, negate, &d, owner](formula f)
+      {
+        return replace_model_with_base(f, base, model, negate, d, owner);
+      };
+    switch (f.kind())
+      {
+      case op::ff:
+          return formula::ff();
+      case op::tt:
+          return formula::tt();
+      case op::eword:
+      case op::Star:
+      case op::FStar:
+      case op::F:
+      case op::G:
+      case op::X:
+      case op::Closure:
+      case op::NegClosure:
+      case op::NegClosureMarked:
+      case op::U:
+      case op::R:
+      case op::W:
+      case op::M:
+      case op::UConcat:
+      case op::EConcat:
+      case op::EConcatMarked:
+      case op::Concat:
+      case op::Fusion:
+      case op::AndNLM:
+      case op::OrRat:
+      case op::AndRat:
+      case op::Xor://added by mohammad: here we are dealing for conjunctive formulas
+      case op::Implies:
+      case op::Equiv:
+      case op::Or:
+        SPOT_UNIMPLEMENTED();
+      case op::ap:
+        if(f == model){
+            if(negate)
+                return spot::formula::Not(base);
+            else
+                return base;
+        }
+        else
+            return f;
+      case op::Not:
+        return spot::formula::Not(recurse(f[0]));
+      case op::And:
+        {
+          std::vector<formula> v;
+          unsigned s = f.size();
+          for (unsigned n = 0; n < s; ++n)
+            v.emplace_back(recurse(f[n]));
+          return spot::formula::And(v);
+        }
+      }
+    SPOT_UNREACHABLE();
+    return nullptr;
+  }
     //static definition
     std::map<int,mv_interval*>* mvspot::interval_bdd::map_interval_base_ = new std::map<int,mv_interval*>();
     std::map<int,mv_interval*>* mvspot::interval_bdd::map_interval_model_ = new std::map<int,mv_interval*>();
 
-    mv_interval* interval_bdd::apply_and(bdd base, bdd model,spot::bdd_dict_ptr dict_){
+    spot::formula mvspot::interval_bdd::prepare_apply_and(spot::formula f_base, spot::formula f_model, spot::bdd_dict_ptr dict_){
+
+        //cout << "simplify_conjuctive_formula -> " << f_base << endl;
+        f_base = simplify_conjuctive_formula(f_base, dict_);
+        cout << "2>>>>> " << f_base << endl;
+
+        //cout << "simplify_conjuctive_formula <- " << f_base << endl;
+        auto aps_base = std::unique_ptr<spot::atomic_prop_set>(spot::atomic_prop_collect(f_base));
+        auto aps_model = std::unique_ptr<spot::atomic_prop_set>(spot::atomic_prop_collect(f_model));
+
+        spot::formula replaced_f = f_model;
+        for (auto b_f: *aps_base)
+        {
+            string str_f = b_f.ap_name();
+            std::size_t found = str_f.find('=');
+            string sym_name;
+            if(found!=std::string::npos){//found interval in base formula
+                sym_name = str_f.substr(0,str_f.find('='));
+                for(spot::formula m_f : *aps_model)
+                {
+                    string str_f_model = m_f.ap_name();
+                    found = str_f_model.find(sym_name+"=");//look for the exact interval name
+                    if(found != std::string::npos){
+                        replaced_f = replace_model_with_base(replaced_f, b_f, m_f, false, dict_, nullptr);
+                        break;
+                    }
+                }
+                //---------
+            }
+  
+            //cout << ">>> old formula:" << f_model << "\n>>> new formula: " << bdd_to_formula(model_f, dict_) << endl;
+        }
+        return replaced_f;
+    }
+    
+    mv_interval* interval_bdd::apply_and(bdd base, bdd model, spot::bdd_dict_ptr dict_){
         
-        //cout << *shared_intervals_->getTo_lattice_()<< endl;
         spot::formula f_base = bdd_to_formula(base, dict_);
         spot::formula f_model = bdd_to_formula(model, dict_);
+
+        std::vector<spot::formula> vec_f = std::vector<spot::formula>();
+        //loop around DNF formula base
+        if(f_base.kind() == op::Or){
+            for(int i=0; i<f_base.size(); i++)
+                vec_f.emplace_back(f_base[i]);
+        }
+        else
+            vec_f.emplace_back(f_base);
         
-        auto aps = std::unique_ptr<spot::atomic_prop_set>(spot::atomic_prop_collect(f_base));
+        for(std::vector<spot::formula>::iterator it = vec_f.begin(); it!= vec_f.end(); ++it){
+            cout << "1>>>>> " << (*it) << endl;
+            formula res_f = prepare_apply_and((*it), f_model, dict_);
+            cout << "3>>>>> " << f_model << endl;
+            cout << "4>>>>> " << res_f << endl;
+        }
+        return nullptr;
+        
+        std::cout << "base: \n" << f_base << endl << "model: \n"  << prepare_apply_and(f_base, f_model, dict_) << endl;
+        
+        auto aps_base = std::unique_ptr<spot::atomic_prop_set>(spot::atomic_prop_collect(f_base));
+        auto aps_model = std::unique_ptr<spot::atomic_prop_set>(spot::atomic_prop_collect(f_model));
         mvspot::mv_interval* itv_base;
         mvspot::mv_interval* itv_model;
-        for (auto pi: *aps)
+        bdd base_or_model = bddtrue;
+        //bdd base_f = f_base;
+        bdd model_f = bddfalse;
+        char _case = '0';
+        /*
+         case 1: 
+         */
+        for (auto b_f: *aps_base)
         {
-            string str_f = convert_to_interval(pi);
-            //cout << ">>>> pi: " << pi << " " << convert_to_interval(pi).find('=') << endl;
+            //model_f = bddtrue;
+            string str_f = b_f.ap_name();
             std::size_t found = str_f.find('=');
-            if(found!=std::string::npos){
-                std::cout << "parsed: " << str_f << " to " << shared_intervals_->parse_string_to_interval(str_f)->getName() << endl;
+            string sym_name;
+            if(found!=std::string::npos){//found interval in base formula
+                sym_name = str_f.substr(0,str_f.find('='));
+                bool base_is_negative = false;
+                for(spot::formula m_f : *aps_model)
+                {
+                    string str_f_model = m_f.ap_name();
+                    found = str_f_model.find(sym_name+"=");//look for the exact interval name
+                    if(found != std::string::npos){
+                           // model_f |= replace_formula_to_bdd(f_model, b_f, m_f, true, dict_, nullptr);
+                        break;
+                    }
+                }
+                //---------
             }
-            int p = dict_->var_map[pi];//bdd number //register_proposition(pi);
-            if(map_interval_base_->find(p) == map_interval_base_->end()){
-                //map_interval_base_[pi] = ;
-            }
-            //else{
-                
-            //}
-            //cout << ">>>>>> p: " << p << " pi: " << pi << " f: " << dict_->bdd_map[p].f << endl;
+
+           
+            //if(model_f==bddtrue)
+            //    model_f = model;
+            //else
+            //    cout << ">>> old formula:" << f_model << "\n>>> new formula: " << bdd_to_formula(model_f, dict_) << endl;
         }
-        
         mv_interval* res;
         return res;
     }
@@ -318,6 +566,38 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
 
 //--------------------------------------------------------//
 
+// Convert a BDD which is known to be a conjunction into a formula. (taken form formula2bdd.cc)
+static spot::formula
+conj_to_formula(bdd b, const spot::bdd_dict_ptr d)
+{
+  if (b == bddfalse)
+    return spot::formula::ff();
+  std::vector<spot::formula> v;
+  while (b != bddtrue)
+    {
+      int var = bdd_var(b);
+      const spot::bdd_dict::bdd_info& i = d->bdd_map[var];
+      assert(i.type == spot::bdd_dict::var);
+     spot::formula res = i.f;
+
+      bdd high = bdd_high(b);
+      if (high == bddfalse)
+        {
+          res = spot::formula::Not(res);
+          b = bdd_low(b);
+        }
+      else
+        {
+          // If bdd_low is not false, then b was not a conjunction.
+          assert(bdd_low(b) == bddfalse);
+          b = high;
+        }
+      assert(b != bddfalse);
+      v.emplace_back(res);
+    }
+  return spot::formula::And(v);
+}
+    
 mv_interval* create_interval_set(string name, string prefix, int num_nodes)
 {
     lattice_node* nodes;
