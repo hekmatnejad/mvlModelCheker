@@ -504,7 +504,7 @@ public:
         //formula_to_bdd(ff,shared_dict)
         //spot::formula ff = org_model_->get_dict()->bdd_map[].f;
         
-        cout << "*** " << ss->get_q_interval()->getName() << " " << ff << " " << spot::formula_to_bdd(ff,shared_dict,nullptr) <<endl;
+    //cout << "*** " << ss->get_q_interval()->getName() << " " << ff << " " << spot::formula_to_bdd(ff,shared_dict,nullptr) <<endl;
         res &= spot::formula_to_bdd(ff,shared_dict,nullptr);
         
         list<string>* tmp_symbols;

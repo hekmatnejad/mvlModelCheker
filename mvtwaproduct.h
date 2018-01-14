@@ -43,8 +43,6 @@
 
 #include <spot/twa/twa.hh>
 #include <spot/misc/fixpool.hh>
-//#include "mv_interval.h"
-
 
 namespace mv
 {

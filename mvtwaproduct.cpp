@@ -33,7 +33,7 @@
 #include <spot/twa/formula2bdd.hh>
 #include <spot/twaalgos/word.hh>
 #include "mvtwaproduct.h"
-#include "mv_interval.h"
+//#include "mv_interval.h"
 
 
 using namespace std;
@@ -260,7 +260,13 @@ namespace spot
         mvspot::mv_interval* int_res = mvspot::interval_bdd::
                 apply_and(right_->cond(), left_->cond(), shared_dict);
         //cout << "left & right = " << int_res->get_as_str() << endl;
-        
+        if(int_res != nullptr){
+            cout << "***RESULT: " << int_res->get_as_str() << endl;
+        }else{
+            cout << "***RESULT: " << "nullptr" << endl;
+           
+        }
+            
         bdd l = left_->cond();
         assert(!right_->done());
         do

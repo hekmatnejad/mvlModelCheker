@@ -61,7 +61,7 @@ mv_interval::mv_interval(string name, float low, float high): mv_interval(name)
     (*map_intervals_)[get_as_str()] = this;
 }
 
-void mv_interval::add_interval(string symbol, float low, float high){
+mv_interval* mv_interval::add_interval(string symbol, float low, float high){
     if(low > high)
         throw(new mv_exception("low of interval must be less than or equals to the high."));
     //lattice_node* ln = new lattice_node("low", low);
@@ -71,7 +71,9 @@ void mv_interval::add_interval(string symbol, float low, float high){
     //interval = new mv_lattice(ln, rn);
     mv_interval* interval = new mv_interval(get_as_str(low, high), low, high);
     (*map_intervals_)[interval->get_as_str()] = interval;
+    (*map_all_intervals_)[std::make_pair(low,high)] = interval;
     //cout << ">>> " << get_as_str(low, high) << " "<< (*map_intervals_)[interval->get_as_str()]->name_<<endl;
+    return interval;
 }
 
 //mv_lattice* mv_interval::get_interval(string symbol){
@@ -201,6 +203,7 @@ mv_interval* mv_interval::join_mv(mv_interval* left, mv_interval* right){
                 left->getButtom()->getValue() : right->getButtom()->getValue();
     float high = left->getTop()->getValue() > right->getTop()->getValue()?
                 left->getTop()->getValue() : right->getTop()->getValue();
+    //cout << "pair: " << low << " , " << high << endl;
     if(map_all_intervals_->find(std::make_pair(low,high))==map_all_intervals_->end()){
         mv_interval* res = new mv_interval(get_as_str(low,high), low, high);
         (*map_all_intervals_)[std::make_pair(low,high)] = res;
@@ -277,10 +280,6 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
 
 //--------------------------------------------------------//
 
-    static string convert_to_interval(spot::formula& f){
-        return f.ap_name();//note: this will remove the extra quotation marks around symbols
-    }
-    
   bdd
   replace_formula_to_bdd(formula f, formula base, formula model, bool negate, const bdd_dict_ptr& d, void* owner)
   {
@@ -375,7 +374,8 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
                     map_itv[f[n].ap_name().substr(0, f[n].ap_name().find('='))] = itv;
                 } else{
                     itv = shared_intervals_->parse_string_to_interval(f[n].ap_name());
-                    itv = map_itv[f[n].ap_name().substr(0, f[n].ap_name().find('='))]->meet_mv(
+                    //the same interval symbols in a conjunctive format must be joint
+                    itv = map_itv[f[n].ap_name().substr(0, f[n].ap_name().find('='))]->join_mv(
                             map_itv[f[n].ap_name().substr(0, f[n].ap_name().find('='))], itv);
                 }
             }else{
@@ -392,10 +392,6 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
     }
 
 
-
-
-
-  
   spot::formula
   replace_model_with_base(formula f, formula base, formula model, bool negate, const bdd_dict_ptr& d, void* owner)
   {
@@ -459,20 +455,21 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
     return nullptr;
   }
     //static definition
-    std::map<int,mv_interval*>* mvspot::interval_bdd::map_interval_base_ = new std::map<int,mv_interval*>();
-    std::map<int,mv_interval*>* mvspot::interval_bdd::map_interval_model_ = new std::map<int,mv_interval*>();
+    std::map<std::string,mv_interval*>* mvspot::interval_bdd::map_interval_base_ = new std::map<std::string,mv_interval*>();
+    std::map<std::string,mv_interval*>* mvspot::interval_bdd::map_interval_model_ = new std::map<std::string,mv_interval*>();
 
-    spot::formula mvspot::interval_bdd::prepare_apply_and(spot::formula f_base, spot::formula f_model, spot::bdd_dict_ptr dict_){
+    std::pair<spot::formula,spot::formula> 
+    mvspot::interval_bdd::prepare_apply_and(spot::formula f_base, spot::formula f_model, 
+            bool negate, spot::bdd_dict_ptr dict_){
 
         //cout << "simplify_conjuctive_formula -> " << f_base << endl;
-        f_base = simplify_conjuctive_formula(f_base, dict_);
-        cout << "2>>>>> " << f_base << endl;
 
         //cout << "simplify_conjuctive_formula <- " << f_base << endl;
         auto aps_base = std::unique_ptr<spot::atomic_prop_set>(spot::atomic_prop_collect(f_base));
         auto aps_model = std::unique_ptr<spot::atomic_prop_set>(spot::atomic_prop_collect(f_model));
 
-        spot::formula replaced_f = f_model;
+        spot::formula replaced_f_p = f_model;
+        spot::formula replaced_f_n = f_model;
         for (auto b_f: *aps_base)
         {
             string str_f = b_f.ap_name();
@@ -480,12 +477,15 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
             string sym_name;
             if(found!=std::string::npos){//found interval in base formula
                 sym_name = str_f.substr(0,str_f.find('='));
+                (*map_interval_base_)[str_f] = shared_intervals_->parse_string_to_interval(str_f);
                 for(spot::formula m_f : *aps_model)
                 {
                     string str_f_model = m_f.ap_name();
                     found = str_f_model.find(sym_name+"=");//look for the exact interval name
-                    if(found != std::string::npos){
-                        replaced_f = replace_model_with_base(replaced_f, b_f, m_f, false, dict_, nullptr);
+                    if(found != std::string::npos){//this is an important symbol
+                        (*map_interval_model_)[str_f_model] = shared_intervals_->parse_string_to_interval(str_f_model);
+                        replaced_f_p = replace_model_with_base(replaced_f_p, b_f, m_f, false, dict_, nullptr);
+                        replaced_f_n = replace_model_with_base(replaced_f_n, b_f, m_f, true, dict_, nullptr);
                         break;
                     }
                 }
@@ -494,10 +494,13 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
   
             //cout << ">>> old formula:" << f_model << "\n>>> new formula: " << bdd_to_formula(model_f, dict_) << endl;
         }
-        return replaced_f;
+        return std::make_pair(replaced_f_p,replaced_f_n);
     }
     
     mv_interval* interval_bdd::apply_and(bdd base, bdd model, spot::bdd_dict_ptr dict_){
+        
+        map_interval_base_->clear();
+        map_interval_model_->clear();
         
         spot::formula f_base = bdd_to_formula(base, dict_);
         spot::formula f_model = bdd_to_formula(model, dict_);
@@ -511,57 +514,78 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
         else
             vec_f.emplace_back(f_base);
         
+        bdd res_bdd_p = bddfalse;
+        bdd res_bdd_n = bddfalse;
+        bdd base_bdd = bddfalse;
+        bdd m_bdd_p = bddfalse;
+        bdd m_bdd_n = bddfalse;
+        int cnt = 0;
         for(std::vector<spot::formula>::iterator it = vec_f.begin(); it!= vec_f.end(); ++it){
-            cout << "1>>>>> " << (*it) << endl;
-            formula res_f = prepare_apply_and((*it), f_model, dict_);
-            cout << "3>>>>> " << f_model << endl;
-            cout << "4>>>>> " << res_f << endl;
+            //cout << "1>>>>> " << (*it) << endl;
+            f_base = simplify_conjuctive_formula((*it), dict_);
+            //cout << "2>>>>> " << f_base << endl;
+            std::pair<spot::formula,spot::formula> res_f = prepare_apply_and(f_base, f_model, true, dict_);
+            //cout << "3>>>>> " << f_model << endl;
+            //cout << "4>>>>> " << res_f.first << endl;
+            //cout << "4>>>>> " << res_f.second << endl;
+            bdd f_bdd = spot::formula_to_bdd(f_base, dict_, nullptr);
+            base_bdd |= f_bdd;
+            
+            m_bdd_p |= spot::formula_to_bdd(res_f.first, dict_, nullptr);
+            m_bdd_n |= spot::formula_to_bdd(res_f.second, dict_, nullptr);
+            cout << ++cnt << endl;
+            
         }
-        return nullptr;
+        cout << "@@@@ base_bdd: " << spot::bdd_to_formula(base_bdd, dict_) << endl;
+        cout << "@@@@ m_bdd_p: " << spot::bdd_to_formula(m_bdd_p, dict_) << endl;
+        //cout << "@@@@ m_bdd_n: " << spot::bdd_to_formula(m_bdd_n, dict_) << endl;
+        res_bdd_p = (base_bdd & m_bdd_p);
+        res_bdd_n = (base_bdd & m_bdd_n);
+
+        if(res_bdd_p != bddfalse)    
+            res_bdd_p = bddtrue;
+        if(res_bdd_n != bddfalse)    
+            res_bdd_n = bddtrue;
         
-        std::cout << "base: \n" << f_base << endl << "model: \n"  << prepare_apply_and(f_base, f_model, dict_) << endl;
         
-        auto aps_base = std::unique_ptr<spot::atomic_prop_set>(spot::atomic_prop_collect(f_base));
-        auto aps_model = std::unique_ptr<spot::atomic_prop_set>(spot::atomic_prop_collect(f_model));
-        mvspot::mv_interval* itv_base;
-        mvspot::mv_interval* itv_model;
-        bdd base_or_model = bddtrue;
-        //bdd base_f = f_base;
-        bdd model_f = bddfalse;
-        char _case = '0';
-        /*
-         case 1: 
-         */
-        for (auto b_f: *aps_base)
-        {
-            //model_f = bddtrue;
-            string str_f = b_f.ap_name();
-            std::size_t found = str_f.find('=');
-            string sym_name;
-            if(found!=std::string::npos){//found interval in base formula
-                sym_name = str_f.substr(0,str_f.find('='));
-                bool base_is_negative = false;
-                for(spot::formula m_f : *aps_model)
-                {
-                    string str_f_model = m_f.ap_name();
-                    found = str_f_model.find(sym_name+"=");//look for the exact interval name
-                    if(found != std::string::npos){
-                           // model_f |= replace_formula_to_bdd(f_model, b_f, m_f, true, dict_, nullptr);
-                        break;
+        if(res_bdd_p == bddfalse)//ok
+            return shared_intervals_->get_interval(0,0);//check for nullptr
+        
+        if(res_bdd_n == bddtrue)
+            return shared_intervals_->get_interval(1,1);
+            
+        if(res_bdd_n == bddfalse && res_bdd_p == bddtrue){
+            //cout << "@@@@ base_bdd: " << spot::bdd_to_formula(base_bdd, dict_) << endl;
+            //cout << "@@@@ m_bdd_p: " << spot::bdd_to_formula(m_bdd_p, dict_) << endl;
+            //cout << "@@@@ m_bdd_n: " << spot::bdd_to_formula(m_bdd_n, dict_) << endl;
+            //cout << "@@@@ res_bdd_p: " << spot::bdd_to_formula(res_bdd_p, dict_) << endl << endl << endl;;
+            string str_sym_b;
+            string str_sym_m;
+            for(std::map<string,mvspot::mv_interval*>::iterator it_base=map_interval_base_->begin();
+                    it_base!=map_interval_base_->end(); ++it_base){
+                for(std::map<string,mvspot::mv_interval*>::iterator it_model=map_interval_model_->begin();
+                        it_model!=map_interval_model_->end(); ++it_model){
+                    str_sym_b = (*it_base).first;
+                    str_sym_m = (*it_model).first;
+                    //check for same interval symbols
+                    if( str_sym_b.substr(0,str_sym_b.find("=")).compare(
+                            str_sym_m.substr(0,str_sym_m.find("=")))==0)
+                    {
+                        cout << (*it_base).first << endl;
+                        
                     }
                 }
-                //---------
             }
-
-           
-            //if(model_f==bddtrue)
-            //    model_f = model;
-            //else
-            //    cout << ">>> old formula:" << f_model << "\n>>> new formula: " << bdd_to_formula(model_f, dict_) << endl;
+            return shared_intervals_->get_interval(0.5,0.5);//TEST TEST TEST
         }
-        mv_interval* res;
-        return res;
-    }
+
+        cout << "\n@@@@ res_bdd_p: " << spot::bdd_to_formula(res_bdd_p, dict_) << endl<<endl;;
+
+        return shared_intervals_->add_interval("WWWWWWWWWW",0.3,0.3);//TEST TEST TEST
+
+        return nullptr;
+        
+     }
 
 
 //--------------------------------------------------------//

@@ -49,23 +49,6 @@ using namespace std;
 //using namespace spot;
 
 
-namespace spot
-{
-//  class mv_twa;
-//  typedef std::shared_ptr<mv_twa> mv_twa_ptr;
-//  typedef std::shared_ptr<const mv_twa> const_mv_twa_ptr;
-//
-//  class mv_twa_graph;
-//  typedef std::shared_ptr<const mv_twa_graph> const_mv_twa_graph_ptr;
-//  typedef std::shared_ptr<mv_twa_graph> mv_twa_graph_ptr;
-//
-//  class mv_twa_product;
-//  typedef std::shared_ptr<const mv_twa_product> const_mv_twa_product_ptr;
-//  typedef std::shared_ptr<mv_twa_product> mv_twa_product_ptr;
-}
-
-
-
 namespace mvspot {
     template<class T>
     string * set2string(set<T> s);
@@ -249,24 +232,7 @@ namespace mvspot {
       //std::set<lattice_node*, node_compare>* join_irreducibles_;
         
     };
-/*
-    class mv_interval{
-    public:
-        mv_interval(float low, float high): low_(low), high_(high){} 
-        
-        float get_low(){
-            return low_;
-        }
-        
-        float get_high(){
-            return high_;
-        }
-    private:
-        float low_;
-        float high_;
-        mv_interval();
-    };
-*/
+
     
 class mv_interval : public std::enable_shared_from_this<mv_interval> {
 public:
@@ -275,7 +241,7 @@ public:
     mv_interval(string name, lattice_node* intervals, int size) throw();
     mv_interval(const mv_interval& orig);
     virtual ~mv_interval();
-    void add_interval(string symbol, float low, float high);
+    mv_interval* add_interval(string symbol, float low, float high);
     mv_interval* parse_string_to_interval(string symbol);
     mv_interval* get_interval(float low, float high);
 
@@ -346,85 +312,19 @@ private:
 
 class interval_bdd : public std::enable_shared_from_this<interval_bdd> {
 public:
-    static std::map<int,mv_interval*>* map_interval_base_;
-    static std::map<int,mv_interval*>* map_interval_model_;
+    static std::map<std::string,mv_interval*>* map_interval_base_;
+    static std::map<std::string,mv_interval*>* map_interval_model_;
     static mv_interval* shared_intervals_;
     interval_bdd(spot::bdd_dict_ptr dict){// : dict_(dict){
     }
     
     static mv_interval* apply_and(bdd base, bdd model, spot::bdd_dict_ptr dict_);
+private:
     static mv_interval* symbol_formual_to_interval(string formula);
     static spot::formula simplify_conjuctive_formula(spot::formula f, const spot::bdd_dict_ptr& d);
-    static spot::formula prepare_apply_and(spot::formula f_base, spot::formula f_model, spot::bdd_dict_ptr dict_);
-    
-private:
-    //static bdd_dict_ptr dict_;
+    static std::pair<spot::formula,spot::formula> prepare_apply_and(spot::formula f_base, spot::formula f_model, bool negate, spot::bdd_dict_ptr dict_);
 };
     
-
-
-/*
-class SPOT_API mv_twa : public spot::twa{
-public:
-        mv_twa(const spot::bdd_dict_ptr& d) :
-        twa(d) {
-        }
-    
-};  
-
-class SPOT_API mv_twa_graph : public spot::twa{
-public:
-        mv_twa_graph(const spot::bdd_dict_ptr& dict) :
-        twa(dict) {
-        }
-    
-};  
-
-
-class SPOT_API mv_twa_product final: public spot::twa_product{
-public:
-  mv_twa_product(const spot::const_twa_ptr& left, const spot::const_twa_ptr& right,
-                    mvspot::mv_interval* intervals);
-protected:
-  const spot::state* left_init_;
-  const spot::state* right_init_;
-  mvspot::mv_interval* intervals_;
-};
-
-class SPOT_API mv_fair_kripke: public mv_twa , public spot::fair_kripke{
-  public:
-    mv_fair_kripke(const spot::bdd_dict_ptr& d)
-      : mv_twa(d), fair_kripke(d)
-      {
-      }
-
-    /// \brief The condition that label the state \a s.
-    ///
-    /// This should be a conjunction of atomic propositions.
-    //virtual bdd state_condition(const spot::state* s) const = 0;
-
-    /// \brief The acceptance mark that labels state \a s.
-    //virtual spot::acc_cond::mark_t
-    //  state_acceptance_mark(const spot::state* s) const = 0;    
-};
-
-
-//namespace mvspot{
-class mv_kripke : public mv_fair_kripke {
-public:
-        mv_kripke(mv_interval* intervals, const spot::bdd_dict_ptr& d) :
-        mv_fair_kripke(d){
-            intervals_ = intervals;
-        }
-
-    mv_interval* getIntervals(){
-        return intervals_;
-    }
-private:
-    mv_interval* intervals_;
-};
-//}    
-*/
 
 }//mvspot namespace
 
