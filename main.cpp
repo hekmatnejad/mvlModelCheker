@@ -140,8 +140,11 @@ float* convert_formula_to_interval(const bdd &cond) {
     return res;
 }
 
-mvspot::mv_interval* convert_formula_to_interval(const bdd &cond, mvspot::mv_interval* intervals) {
+mvspot::mv_interval* convert_formula_to_interval(const bdd &cond, 
+        mvspot::mv_interval* intervals) {
     string f = bdd_format_formula(shared_dict, cond);
+    if(f.size()<7 || (f.find("=[")==std::string::npos))
+        return nullptr;
     f = f.substr(3,f.size()-4);
     //cout << "------ "+f+"\n"; 
     if(intervals->getMap_intervals()->find(f)!=intervals->getMap_intervals()->end())
@@ -245,8 +248,9 @@ public:
         //assuming all variables are positive
         int hash = 23;
         if (NUM_CARS > 1)
-            for (int i = 0; i < NUM_CARS - 1; i++) {
-                hash = hash * 31 + (i + 1 + state_num_[i])*(state_num_[i + 1]);
+            for (int i = 0; i <= NUM_CARS - 1; i++) {
+                //hash = hash * 31 + (i + 2 + state_num_[i])*(1+state_num_[i + 1]);
+                hash = hash * 31 + state_num_[i];
                 //note: for q_interval and other fields for now we do not need them
                 //hash = hash*31 + aut_succ_[i]->dst()->hash();
                 //hash = hash*31 + q_intervals_[i][0];//not really necessary?
@@ -282,19 +286,21 @@ private:
     spot::twa_graph_ptr org_model_;
     mvspot::mv_interval* intervals_;
     float time_;
-
+    unsigned* state_num_;
 public:
 
     marine_robot_succ_iterator(unsigned* state_num, spot::twa_graph_ptr org_model, 
             float time, bdd cond, mvspot::mv_interval* intervals)
     : kripke_succ_iterator(cond), org_model_(org_model), time_(time) {
         intervals_ = intervals;
+        state_num_ = new unsigned[NUM_CARS];
         //cout << "in: marine_robot_succ_iterator\n";
-        aut_succ_ = new twa_succ_iterator*[NUM_CARS];
+        aut_succ_ = new spot::twa_succ_iterator*[NUM_CARS];
         for (int i = 0; i < NUM_CARS; i++) {
+            state_num_[i] = state_num[i];
             aut_succ_[i] = org_model->succ_iter(org_model->state_from_number(state_num[i]));
         }
-        delete[] state_num;
+        //delete[] state_num;
     }
 
     //virtual ~marine_robot_succ_iterator() override
@@ -315,14 +321,19 @@ public:
     }
 
     bool next() override {
-        bool res = false;
-        for (int i = 0; i < NUM_CARS; i++)
-            res |= aut_succ_[i]->next();
-        return res;
+        
+        bool res = true;//false
+        for (int i = 0; i < NUM_CARS; i++){
+            if(aut_succ_[i]->next())
+                return true;
+            aut_succ_[i]->first();
+        }
+        return false;
     }
 
     bool done() const override {
-        bool res = true;
+        
+        bool res = true;//true
         for (int i = 0; i < NUM_CARS; i++)
             res &= aut_succ_[i]->done();
         return res;
@@ -332,37 +343,25 @@ public:
 
         unsigned* state_num;
         state_num = new unsigned[NUM_CARS];
-        //float** intervals; //[NUM_CARS][2];
-        //intervals = new float*[NUM_CARS];
         mvspot::mv_interval* itv = nullptr;
         for (int i = 0; i < NUM_CARS; i++) {
             state_num[i] = org_model_->state_number(aut_succ_[i]->dst());
-            //intervals[i] = new float[2];
+
             if (aut_succ_[i]->cond() != bddfalse) {
-                //std::cout << "formula: " << bdd_to_formula(aut_succ_[i]->cond(),org_model_->get_dict()) << endl;
-                //float* ints = convert_formula_to_interval(aut_succ_[i]->cond());
-                mvspot::mv_interval* tmp_itv = convert_formula_to_interval(aut_succ_[i]->cond(), intervals_);
+                spot::internal::twa_succ_iterable k = 
+                    org_model_->succ(org_model_->state_from_number(state_num[i]));
+                bdd cnd = (*k.begin())->cond();
+            //cout << "\n\n\n\n\n\n\n\n------------" << spot::bdd_to_formula(cnd,shared_dict) << "\n";
+                mvspot::mv_interval* tmp_itv = convert_formula_to_interval(cnd, intervals_);
                 if(tmp_itv!=nullptr && itv==nullptr)
                     itv = tmp_itv;
                 else if(itv!=nullptr && tmp_itv!=nullptr && i>0)
                     itv = itv->meet_mv(itv, tmp_itv);
-                //if(tmp_itv!=nullptr)
-                //    cout << "interval:\n" << *tmp_itv->getTo_lattice_() << endl;
-                //intervals[i][0] = ints[0];
-                //intervals[i][1] = ints[1];
-                //delete[] ints;
-            } else {
-                //intervals[i][0] = -1;
-                //intervals[i][1] = -1;
-            }
+            } 
         }
-
-        //if(itv!=nullptr)
-        //    cout << "meet interval:\n" << itv->getName() << endl;
-        //    cout << "meet interval:\n" << *itv->getTo_lattice_() << endl;
-
-        //return new marine_robot_state(state_num, 0, true, tmp_succ, org_model_, intervals);
-        //return new marine_robot_state(state_num, 0, true, org_model_, intervals);
+        
+        //std::cout << "form: <" << state_num_[0] << " " << state_num_[1] << 
+        //        "> to: <" << state_num[0] << " " << state_num[1] << ">\n";
         return new marine_robot_state(state_num, 0, true, org_model_, itv);
     }
 
@@ -447,9 +446,11 @@ public:
         mvspot::mv_interval* itv = nullptr;
         for (int i = 0; i < NUM_CARS; i++) {
             init_state[i] = init_state_[i];
-            spot::internal::twa_succ_iterable k = org_model_->succ(org_model_->state_from_number(init_state_[i]));
+            spot::internal::twa_succ_iterable k = 
+                    org_model_->succ(org_model_->state_from_number(init_state_[i]));
             if ((*k.begin())->cond() != bddfalse) {
-                mvspot::mv_interval* tmp_itv = convert_formula_to_interval((*k.begin())->cond(), intervals_);
+                mvspot::mv_interval* tmp_itv = 
+                        convert_formula_to_interval((*k.begin())->cond(), intervals_);
                 if(tmp_itv!=nullptr && itv==nullptr)
                     itv = tmp_itv;
                 else if(itv!=nullptr && tmp_itv!=nullptr && i>0)
@@ -501,6 +502,7 @@ public:
         
         //ss->get_q_interval()->getName()
         spot::formula ff = spot::parse_formula("\"q="+ss->get_q_interval()->getName()+"\"");
+        //std::cout << "*** " << ff << " " << ss->get_state_num()[0] << " " << ss->get_state_num()[1] << " -> " << ss->get_q_interval()->getName() << "\n";
         //formula_to_bdd(ff,shared_dict)
         //spot::formula ff = org_model_->get_dict()->bdd_map[].f;
         
@@ -576,7 +578,19 @@ void model_4(string formula) {
     string str_certainty_ap = "q > " + str_threshold;
     formula = "G(\"q=[0.5,1]\") & F(C1_loc_1) & F(C1_loc_9) & ((!C1_loc_1) U C1_loc_9) & "
             "G(!C1_loc_1 | !C1_loc_9) & G(C1_loc_9 -> XG(\"q=[1,1]\"))";
-    formula += " & F(C2_loc_4) & F(C2_loc_12) & ((!C2_loc_12) U C2_loc_4) & G(!C2_loc_4 | !C2_loc_12)";
+    formula += " & F(C2_loc_4) & F(C2_loc_12) & ((!C2_loc_12) U C2_loc_4) & "
+            "G(!C2_loc_4 | !C2_loc_12)";
+
+
+    formula = "G(\"q=[0.5,1]\") & F(C1_loc_1) & F(C1_loc_9) & ((!C1_loc_1) U C1_loc_9) & "
+            "G(!C1_loc_1 | !C1_loc_9) & G(C1_loc_9 -> XG(\"q=[1,1]\"))";
+    formula += " & F(C2_loc_4) & F(C2_loc_12) & ((!C2_loc_12) U C2_loc_4) & "
+            "G(!C2_loc_4 | !C2_loc_12)";
+
+
+    //formula = "F(C1_loc_1) & G(!\"q=[0,0.5]\")";
+    //formula += " & F(C2_loc_12)";
+
     cout << ">>> Formula: " << formula << endl;
 
     spot::parsed_formula pf = spot::parse_infix_psl(formula); //"FG(goal) & G \"c > 0.2\" "
@@ -589,7 +603,7 @@ void model_4(string formula) {
     //spot::formula f = spot::formula::Not(pf.f);
     spot::formula f = pf.f;
     spot::twa_graph_ptr af = spot::translator(shared_dict).run(f);
-    //Util::write2File("new_formula.dot", af);
+    Util::write2File("new_formula.dot", af);
     
     //mvspot::mv_interval* intervals = mvspot::create_interval_set("certainty", "q", 5);
     mvspot::mv_interval* shared_intervals = mvspot::create_interval_set("certainty", "q", 5);
@@ -609,7 +623,7 @@ void model_4(string formula) {
     // Find a run of or marine_robot_kripke that intersects af.
     auto k = std::make_shared<marine_robot_kripke>(shared_dict, str_certainty_ap, aut_model,
             init_state, lst_loc, shared_intervals);
-
+    
     cout << "accepting condition <model>: " << k->acc()<< " and formulas:\n";
     for(spot::formula f:  k->ap())
         cout << f <<endl;

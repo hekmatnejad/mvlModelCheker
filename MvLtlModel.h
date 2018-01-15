@@ -257,7 +257,16 @@ public:
     string get_as_str();
     string get_as_str(float low, float high);
     std::pair<float,float> get_as_pair();
+    
+    bool isFalse() {
+        return (getButtom()->getValue() == MIN_VAL_ && getTop()->getValue() == MIN_VAL_);
+    }
 
+    bool isTrue() {
+        return (getButtom()->getValue() == MAX_VAL_ && getTop()->getValue() == MAX_VAL_);
+    }
+    
+    
     string getName() const {
         return name_;
     }
@@ -283,6 +292,8 @@ public:
     }
     
 private:
+    static constexpr float MIN_VAL_ = 0;
+    static constexpr float MAX_VAL_ = 1;
     bool is_TO_lattice_container_ = false;
     string name_ = "";
     lattice_node* intervals_=0;
@@ -318,9 +329,9 @@ public:
     interval_bdd(spot::bdd_dict_ptr dict){// : dict_(dict){
     }
     
-    static mv_interval* apply_and(bdd base, bdd model, spot::bdd_dict_ptr dict_);
-private:
+    static std::pair<mv_interval*,bdd> apply_and(bdd base, bdd model, spot::bdd_dict_ptr dict_);
     static mv_interval* symbol_formual_to_interval(string formula);
+private:
     static spot::formula simplify_conjuctive_formula(spot::formula f, const spot::bdd_dict_ptr& d);
     static std::pair<spot::formula,spot::formula> prepare_apply_and(spot::formula f_base, spot::formula f_model, bool negate, spot::bdd_dict_ptr dict_);
 };

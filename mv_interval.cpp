@@ -194,7 +194,7 @@ std::pair<float,float> mv_interval::get_as_pair(){
 //lattice operators
 
 float mv_interval::complement_mv(float given){
-    return getTop()->getValue() - given;
+    return MAX_VAL_ - given;
 }
 
 mv_interval* mv_interval::join_mv(mv_interval* left, mv_interval* right){
@@ -256,15 +256,14 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
     float b_high = base->getTop()->getValue();
     float low = given->getButtom()->getValue();
     float high = given->getTop()->getValue();
-    float min_val = getButtom()->getValue();
-    float max_val = getTop()->getValue();
-    float new_low = min_val;
-    float new_high = min_val;
-    if( (b_low==min_val && b_high==max_val) || (b_low<=low && b_high==max_val)){
+    float new_low = MIN_VAL_;
+    float new_high = MIN_VAL_;
+    //std::cout << b_low << " " << b_high << " , " << low << " " << high << endl;
+    if( (b_low==MIN_VAL_ && b_high==MAX_VAL_) || (b_low<=low && b_high==MAX_VAL_)){
         new_low = low;
         new_high = high;
     }
-    else if ( b_high>=high && b_low==min_val){
+    else if ( b_high>=high && b_low==MIN_VAL_){
         new_low = complement_mv(high);
         new_high = complement_mv(low);
     }
@@ -356,27 +355,94 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
         return shared_intervals_->parse_string_to_interval(formula);
     }
 
+ spot::formula
+  remove_negation_from_interval_formula(formula f, const bdd_dict_ptr& d)
+  {
+    auto recurse = [&d](formula f)
+      {
+        return remove_negation_from_interval_formula(f, d);
+      };
+    switch (f.kind())
+      {
+      case op::ff:
+          return formula::ff();
+      case op::tt:
+          return formula::tt();
+      case op::eword:
+      case op::Star:
+      case op::FStar:
+      case op::F:
+      case op::G:
+      case op::X:
+      case op::Closure:
+      case op::NegClosure:
+      case op::NegClosureMarked:
+      case op::U:
+      case op::R:
+      case op::W:
+      case op::M:
+      case op::UConcat:
+      case op::EConcat:
+      case op::EConcatMarked:
+      case op::Concat:
+      case op::Fusion:
+      case op::AndNLM:
+      case op::OrRat:
+      case op::AndRat:
+      case op::Xor://added by mohammad: here we are dealing for conjunctive formulas
+      case op::Implies:
+      case op::Equiv:
+      case op::Or:
+        SPOT_UNIMPLEMENTED();
+      case op::ap:
+            return f;
+      case op::Not:
+          if(f[0].ap_name().find("=[")==std::string::npos)
+            return spot::formula::Not(recurse(f[0]));
+          else{
+              mvspot::mv_interval* itv = interval_bdd::symbol_formual_to_interval(f[0].ap_name());
+              itv = itv->not_mv(itv);
+              std::string sym_name = f[0].ap_name();
+              sym_name = sym_name.substr(0,sym_name.find("="));
+              sym_name += itv->getName();
+              //cout << ">>>> negated " << f[0].ap_name() << " to " << sym_name << endl;
+              return spot::formula::ap(sym_name);
+          }
+      case op::And:
+        {
+          std::vector<formula> v;
+          unsigned s = f.size();
+          for (unsigned n = 0; n < s; ++n)
+            v.emplace_back(recurse(f[n]));
+          return spot::formula::And(v);
+        }
+      }
+    SPOT_UNREACHABLE();
+    return nullptr;
+  }
+    
+    
     spot::formula interval_bdd::simplify_conjuctive_formula(spot::formula f, const bdd_dict_ptr& d) {
         if (f.kind() == op::ap)
             return f;
         if (f.kind() != op::And)
             return f;
-        //std::cout << "******************\n";
+        //std::cout << "******************\n" << f << endl;
         std::map<string, mvspot::mv_interval*> map_itv = std::map<string, mvspot::mv_interval*>();
         std::vector<formula> v= std::vector<formula>();
         unsigned s = f.size();
         for (unsigned n = 0; n < s; ++n) {
             if (f[n].kind() == op::ap && f[n].ap_name().find('=') != std::string::npos) {
                 //std::cout << f[n] << endl;
-                mvspot::mv_interval* itv;
+                mvspot::mv_interval* itv = shared_intervals_->parse_string_to_interval(f[n].ap_name());
                 if (map_itv.find(f[n].ap_name().substr(0, f[n].ap_name().find('='))) == map_itv.end()) {
-                    itv = shared_intervals_->parse_string_to_interval(f[n].ap_name());
+                    //itv = shared_intervals_->parse_string_to_interval(f[n].ap_name());
                     map_itv[f[n].ap_name().substr(0, f[n].ap_name().find('='))] = itv;
                 } else{
-                    itv = shared_intervals_->parse_string_to_interval(f[n].ap_name());
+                    //itv = shared_intervals_->parse_string_to_interval(f[n].ap_name());
                     //the same interval symbols in a conjunctive format must be joint
-                    itv = map_itv[f[n].ap_name().substr(0, f[n].ap_name().find('='))]->join_mv(
-                            map_itv[f[n].ap_name().substr(0, f[n].ap_name().find('='))], itv);
+                    itv = itv->join_mv(map_itv[f[n].ap_name().substr(0, f[n].ap_name().find('='))], itv);
+                    map_itv[f[n].ap_name().substr(0, f[n].ap_name().find('='))] = itv;
                 }
             }else{
                 v.emplace_back(f[n]);
@@ -388,7 +454,9 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
             d->register_proposition(f_new,nullptr);
             v.emplace_back(f_new);
         }
-        return spot::formula::And(v);
+        spot::formula res_f = spot::formula::And(v);
+        //std::cout << "------------------\n" << res_f << endl;
+        return res_f;
     }
 
 
@@ -497,7 +565,7 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
         return std::make_pair(replaced_f_p,replaced_f_n);
     }
     
-    mv_interval* interval_bdd::apply_and(bdd base, bdd model, spot::bdd_dict_ptr dict_){
+    std::pair<mv_interval*,bdd> interval_bdd::apply_and(bdd base, bdd model, spot::bdd_dict_ptr dict_){
         
         map_interval_base_->clear();
         map_interval_model_->clear();
@@ -522,9 +590,11 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
         int cnt = 0;
         for(std::vector<spot::formula>::iterator it = vec_f.begin(); it!= vec_f.end(); ++it){
             //cout << "1>>>>> " << (*it) << endl;
-            f_base = simplify_conjuctive_formula((*it), dict_);
+            f_base = remove_negation_from_interval_formula((*it), dict_);
+            f_base = simplify_conjuctive_formula(f_base, dict_);
             //cout << "2>>>>> " << f_base << endl;
-            std::pair<spot::formula,spot::formula> res_f = prepare_apply_and(f_base, f_model, true, dict_);
+            std::pair<spot::formula,spot::formula> res_f = 
+                    prepare_apply_and(f_base, f_model, true, dict_);
             //cout << "3>>>>> " << f_model << endl;
             //cout << "4>>>>> " << res_f.first << endl;
             //cout << "4>>>>> " << res_f.second << endl;
@@ -533,11 +603,11 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
             
             m_bdd_p |= spot::formula_to_bdd(res_f.first, dict_, nullptr);
             m_bdd_n |= spot::formula_to_bdd(res_f.second, dict_, nullptr);
-            cout << ++cnt << endl;
+            //cout << ++cnt << endl;
             
         }
-        cout << "@@@@ base_bdd: " << spot::bdd_to_formula(base_bdd, dict_) << endl;
-        cout << "@@@@ m_bdd_p: " << spot::bdd_to_formula(m_bdd_p, dict_) << endl;
+        //cout << "@@@@ base_bdd: " << spot::bdd_to_formula(base_bdd, dict_) << endl;
+        //cout << "@@@@ m_bdd_p:  " << spot::bdd_to_formula(m_bdd_p, dict_) << endl;
         //cout << "@@@@ m_bdd_n: " << spot::bdd_to_formula(m_bdd_n, dict_) << endl;
         res_bdd_p = (base_bdd & m_bdd_p);
         res_bdd_n = (base_bdd & m_bdd_n);
@@ -548,19 +618,24 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
             res_bdd_n = bddtrue;
         
         
-        if(res_bdd_p == bddfalse)//ok
-            return shared_intervals_->get_interval(0,0);//check for nullptr
+        if(res_bdd_p == bddfalse){//ok
+            return std::make_pair(shared_intervals_->get_interval(0,0), bddfalse);//check for nullptr
+        }
         
-        if(res_bdd_n == bddtrue)
-            return shared_intervals_->get_interval(1,1);
+        if(res_bdd_n == bddtrue){
+            //std::cout << "********************\n";
+            return std::make_pair(shared_intervals_->get_interval(1,1), bddtrue);
+        }
             
         if(res_bdd_n == bddfalse && res_bdd_p == bddtrue){
-            //cout << "@@@@ base_bdd: " << spot::bdd_to_formula(base_bdd, dict_) << endl;
-            //cout << "@@@@ m_bdd_p: " << spot::bdd_to_formula(m_bdd_p, dict_) << endl;
-            //cout << "@@@@ m_bdd_n: " << spot::bdd_to_formula(m_bdd_n, dict_) << endl;
+            //cout << "@@@@ base_bdd:  " << spot::bdd_to_formula(base_bdd, dict_) << endl;
+            //cout << "@@@@ m_bdd_p:   " << spot::bdd_to_formula(m_bdd_p, dict_) << endl;
+            //cout << "@@@@ m_bdd_n:   " << spot::bdd_to_formula(m_bdd_n, dict_) << endl;
             //cout << "@@@@ res_bdd_p: " << spot::bdd_to_formula(res_bdd_p, dict_) << endl << endl << endl;;
             string str_sym_b;
             string str_sym_m;
+            mvspot::mv_interval* itv = shared_intervals_->get_interval(0,0);
+            //cout << "SIZE: " << map_interval_base_->size() << " " << map_interval_model_->size()<<endl;
             for(std::map<string,mvspot::mv_interval*>::iterator it_base=map_interval_base_->begin();
                     it_base!=map_interval_base_->end(); ++it_base){
                 for(std::map<string,mvspot::mv_interval*>::iterator it_model=map_interval_model_->begin();
@@ -571,19 +646,25 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
                     if( str_sym_b.substr(0,str_sym_b.find("=")).compare(
                             str_sym_m.substr(0,str_sym_m.find("=")))==0)
                     {
-                        cout << (*it_base).first << endl;
-                        
+                        //std::cout << "\n*%*%* " << (*it_base).first << " " << (*it_model).first <<endl ;
+                        //std::cout << "*%*%* " << (*it_base).second->get_as_str() << " " << (*it_model).second->get_as_str() <<endl <<endl;
+                        itv = itv->join_mv(itv,itv->psi_mv(
+                                (*it_base).second,(*it_model).second));
                     }
                 }
             }
-            return shared_intervals_->get_interval(0.5,0.5);//TEST TEST TEST
+            //std::string br = itv->isFalse()? " IsFalse" : " NoFalse";
+            //std::cout << "---itv: " << itv->getName() << " " << itv->get_as_str() << br << endl; 
+            return std::make_pair(itv, (base & model));
+            //return std::make_pair(shared_intervals_->get_interval(0.5,0.5), (base & model));
+            //return shared_intervals_->get_interval(0.5,0.5);//TEST TEST TEST
         }
 
-        cout << "\n@@@@ res_bdd_p: " << spot::bdd_to_formula(res_bdd_p, dict_) << endl<<endl;;
+        //cout << "\n@@@@ res_bdd_p: " << spot::bdd_to_formula(res_bdd_p, dict_) << endl<<endl;;
 
-        return shared_intervals_->add_interval("WWWWWWWWWW",0.3,0.3);//TEST TEST TEST
-
-        return nullptr;
+        //return shared_intervals_->add_interval("WWWWWWWWWW",0.3,0.3);//TEST TEST TEST
+        std::cout << "\nWRONG RESULT!!!!\n";
+        return std::make_pair(nullptr,bddfalse);
         
      }
 

@@ -251,37 +251,28 @@ namespace spot
       {
         // All the transitions of left_ iterator have the
         // same label, because it is a Kripke structure.
-          //std::cout << "---> next_non_false_ :left: " << 
-          //        bdd_to_formula(left_->cond(),shared_dict)<<endl;
-          //std::cout << "---> next_non_false_ :right: " << 
-          //        bdd_to_formula(right_->cond(),shared_dict)<<endl;
+
+        std::pair<mvspot::mv_interval*,bdd> itv_res;
         
-        //mvspot::interval_bdd ibdd(shared_dict);
-        mvspot::mv_interval* int_res = mvspot::interval_bdd::
-                apply_and(right_->cond(), left_->cond(), shared_dict);
-        //cout << "left & right = " << int_res->get_as_str() << endl;
-        if(int_res != nullptr){
-            cout << "***RESULT: " << int_res->get_as_str() << endl;
-        }else{
-            cout << "***RESULT: " << "nullptr" << endl;
-           
-        }
-            
         bdd l = left_->cond();
         assert(!right_->done());
         do
           {
             bdd r = right_->cond();
+            itv_res = mvspot::interval_bdd::apply_and(r, l, shared_dict);   
+            //std::cout << "****RESULT " << itv_res.first->get_as_str() << "isFalse:" << itv_res.first->isFalse()<< endl;
             bdd current_cond = l & r;
-
-            if (current_cond != bddfalse)
-              {
-                current_cond_ = current_cond;
+            if(!itv_res.first->isFalse() && current_cond != bddfalse)
+            //if(current_cond != bddfalse)
+            {
+                current_cond_ = current_cond;//itv_res.second;
+                current_cond_ = bddtrue;//****************test
                 return true;
-              }
+            }
           }
         while (right_->next());
         return false;
+
       }
 
       bool next() override
@@ -482,6 +473,7 @@ namespace spot
     else
       a = remove_fin_maybe(a);
     auto run = mv::spot::otf_product(a, other)->accepting_run();
+    //auto run = spot::otf_product(a, other)->accepting_run();
     if (!run)
       return nullptr;
     return run->project(from_other ? other : a);
