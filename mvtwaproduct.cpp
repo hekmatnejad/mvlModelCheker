@@ -252,7 +252,7 @@ namespace spot
         // All the transitions of left_ iterator have the
         // same label, because it is a Kripke structure.
         std::pair<mvspot::mv_interval*,bdd> itv_res;
-        current_cond_ = bddfalse;
+        //current_cond_ = bddfalse;
         
         bdd l = left_->cond();
         assert(!right_->done());
@@ -267,8 +267,8 @@ namespace spot
             if(!itv_res.first->isFalse() && current_cond != bddfalse)
             //if(current_cond != bddfalse)
             {
-                cost_inf_ = 2 - itv_res.first->getButtom()->getValue();
-                cost_sup_ = 2 - itv_res.first->getTop()->getValue();
+                cost_inf_ = 2 + 1 - itv_res.first->getButtom()->getValue();
+                cost_sup_ = 2 + 1 - itv_res.first->getTop()->getValue();
                 //cout << "cost: " << cost_inf_ << " , " << cost_sup_ << endl;
                 current_cond_ = current_cond;//itv_res.second;
                 current_cond_ = bddtrue;//****************test
@@ -522,84 +522,117 @@ class minimal_cost {
     typedef MvQueue<std::pair<const spot::state*,float>, 
      std::vector<std::pair<const spot::state*,float>>, costcomparison> prqueue;
     using spair = std::pair<const spot::state*,float>;
+    typedef std::pair<float,const spot::state*> mpair;
 public:
     minimal_cost(spot::twa_product_ptr twa_prd){
         twa_prd_ = twa_prd;
     }
     
     void find_optimal_path() {
-        todo = prqueue();
-        //std::map<float,const spot::state*> exmplore = std::map<float,const spot::state*>();
-        
-        //std::set<const spot::state*> visited = std::set<const spot::state*>();
+        //todo = prqueue();
+        std::multimap<float,const spot::state*> explore = std::multimap<float,const spot::state*>();
+        //std::priority_queue<float, std::vector<float>, std::less<float>> 
+        //cost_q = std::priority_queue<float, std::vector<float>, std::less<float>>();
+        std::priority_queue<float, std::vector<float>, std::greater<float>> 
+                cost_q = std::priority_queue<float, std::vector<float>, std::greater<float>>();
         std::set<size_t> visited = std::set<size_t>();
-        //std::map<const spot::state*,const spot::state*> reverse = std::map<const spot::state*,const spot::state*>();
         std::map<size_t,size_t> reverse = std::map<size_t,size_t>();
         std::map<size_t,const spot::state*> reverse_state = std::map<size_t,const spot::state*>();
         size_t target;
         size_t start;
-        //todo.push(std::make_pair(twa_prd_->get_init_state(),0));
         std::pair<const spot::state*,float> item = 
                 std::make_pair(twa_prd_->get_init_state(),0);
         std::cout << "init: " << twa_prd_->format_state(twa_prd_->get_init_state()) << endl;
-        todo.push(item);
-        //visited.insert(item.first);
+        //todo.push(item);
+        explore.insert(std::make_pair<float,const spot::state*>(0,twa_prd_->get_init_state()));
+        cost_q.push(0);
         start = item.first->hash();
         visited.insert(item.first->hash());
         reverse[item.first->hash()]=item.first->hash();
         reverse_state[item.first->hash()]=item.first;
         bool found_plan = false;
-        while(!todo.empty())
+        const spot::state* cs;
+        float min_c = 0;
+        float optimal_cost = -1;
+        //while(!todo.empty())
+        while(!explore.empty())
         {
-            spair node = todo.top();
-            todo.pop();
-            visited.insert(node.first->hash());
+            min_c = cost_q.top();
+            cost_q.pop();
+            cs = explore.find(min_c)->second;
+            //std::cout << ": " << twa_prd_->format_state(cs) << endl;
+            //std::cout << "size: " << explore.size() << " min: " << min_c << endl;
+            explore.erase(explore.find(min_c));
+            visited.insert(cs->hash());
             twa_succ_iterator_product_kripke* tit = 
                     static_cast<twa_succ_iterator_product_kripke*>
-                    (twa_prd_->succ_iter(node.first));
+                    (twa_prd_->succ_iter(cs));
+            //spair node = todo.top();
+            //todo.pop();
+            //visited.insert(node.first->hash());
+            //twa_succ_iterator_product_kripke* tit = 
+            //        static_cast<twa_succ_iterator_product_kripke*>
+            //        (twa_prd_->succ_iter(node.first));
             if(!tit->first())
                 continue;
-            while(!tit->done()){
+            while(!tit->done())
+            {
                 reverse_state[tit->dst()->hash()] = tit->dst();
-                if(twa_prd_->right_acc().accepting(tit->acc()))
                 //if(tit->acc().has(0))
+                if(twa_prd_->right_acc().accepting(tit->acc()))
                 {
+                    cout << tit->acc()<< endl;
                     target = tit->dst()->hash();
-                    reverse[target] = node.first->hash();
+                    reverse[target] = cs->hash();
+                    //reverse[target] = node.first->hash();
+                    optimal_cost = min_c;
                     found_plan = true;
                     break;
                 }
                 if(visited.find(tit->dst()->hash())==visited.end()){
-                    reverse[tit->dst()->hash()] = node.first->hash();
-                    todo.push(std::make_pair(tit->dst(), node.second + tit->cost_inf()));
-                    //visited.insert(tit->dst()->hash());
+                    reverse[tit->dst()->hash()] = cs->hash();
+                    cost_q.push(min_c+tit->cost_inf());
+                    explore.insert(std::make_pair<float,const spot::state*>
+                            (min_c+tit->cost_inf(),tit->dst()));
+                    
+                    //reverse[tit->dst()->hash()] = node.first->hash();
+                    //todo.push(std::make_pair(tit->dst(), node.second + tit->cost_inf()));
                 }else{
-                    //todo.find_replace(std::make_pair(tit->dst(), node.second + tit->cost_inf()));
-                   // reverse[tit->dst()->hash()] = node.first->hash();
-                    //if(todo.find_replace(std::make_pair(tit->dst(), node.second + tit->cost_inf())))
-                    //    cout << "updated node\n";
                 }
-                tit->next();    
+                //while(!tit->done() && tit->cond()==bddfalse)
+                    tit->next();    
                 //if(!tit->next())  break;
             }
             if(found_plan)
                 break;
         }
         if(found_plan){
-            std::cout << "\nFOUND PLAN ****\n" << "reverse size: " << reverse.size() << " todo size: " << todo.size() << endl;
+            std::cout << "\nFOUND AN OPTIMAL PLAN ****\n" << "reverse size: " << reverse.size() 
+                    << " explore size: " << explore.size() 
+                    << " visited size: " << visited.size() << endl;
             //while(!todo.empty()){
             //    std::cout << "todo: " << twa_prd_->format_state(todo.top().first) << " cost: " << todo.top().second << endl;
             //    todo.pop();
             //}
+//            while(!cost_q.empty()){
+//                std::cout << "cost: " << cost_q.top() << endl;
+//                cost_q.pop();
+//            }
+            std::stack<const spot::state*> path = std::stack<const spot::state*> ();
+            
             size_t st = target;
             while(st != start){
-                cout << twa_prd_->format_state(reverse_state[st]) << endl;//twa_prd_->format_state(st) << endl;
+                path.push(reverse_state[st]);
+                //cout << twa_prd_->format_state(reverse_state[st]) << endl;//twa_prd_->format_state(st) << endl;
                 st = reverse[st];
             }
-            cout << twa_prd_->format_state(reverse_state[st]) << endl;//twa_prd_->format_state(st) << endl;
-            //for(std::vector<const spot::state*>::iterator it = path.begin(); it!=path.end(); ++it){
-            //    cout << twa_prd_->format_state((*it)) << endl;
-            //}
+            path.push(reverse_state[st]);
+            //cout << twa_prd_->format_state(reverse_state[st]) << endl;//twa_prd_->format_state(st) << endl;
+            while(!path.empty()){
+                cout << twa_prd_->format_state(path.top()) << endl;//twa_prd_->format_state(st) << endl;
+                path.pop();
+            }
+            cout << "\noptimal path cost: " << optimal_cost << endl;
         }else{
             std::cout << "\nNOT FOUND PLAN ****\n";
         }

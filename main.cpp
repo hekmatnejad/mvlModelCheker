@@ -325,8 +325,9 @@ public:
         
         bool res = true;//false
         for (int i = 0; i < NUM_CARS; i++){
-            if(aut_succ_[i]->next())
+            if(aut_succ_[i]->next()){
                 return true;
+            }
             aut_succ_[i]->first();
         }
         return false;
