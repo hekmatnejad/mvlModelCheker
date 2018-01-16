@@ -9,7 +9,7 @@
             <url>mvtwaproduct.cpp</url>
             <bookmark id="1">
                 <name/>
-                <line>408</line>
+                <line>425</line>
                 <key/>
             </bookmark>
         </file>
@@ -18,10 +18,8 @@
         <group>
             <file>file:/Users/mhekmatnejad/Projects/mvlModelCheker/mvtwaproduct.h</file>
             <file>file:/Users/mhekmatnejad/Projects/mvlModelCheker/MvLtlModel.h</file>
-            <file>file:/Users/mhekmatnejad/Projects/mvlModelCheker/new_formula.jpeg</file>
             <file>file:/Users/mhekmatnejad/Projects/mvlModelCheker/main.cpp</file>
             <file>file:/Users/mhekmatnejad/Projects/mvlModelCheker/mvtwaproduct.cpp</file>
-            <file>file:/Users/mhekmatnejad/Projects/mvlModelCheker/Makefile</file>
             <file>file:/Users/mhekmatnejad/Projects/mvlModelCheker/mv_interval.cpp</file>
         </group>
     </open-files>

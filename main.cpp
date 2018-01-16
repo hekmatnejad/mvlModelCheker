@@ -76,6 +76,7 @@ std:
     kg_model = read_model_aut->ks;
     aut_model = read_model_aut->aut;
 
+
     model_4("");
 
     cout << "done!\n";
@@ -584,8 +585,8 @@ void model_4(string formula) {
 
     formula = "G(\"q=[0.5,1]\") & F(C1_loc_1) & F(C1_loc_9) & ((!C1_loc_1) U C1_loc_9) & "
             "G(!C1_loc_1 | !C1_loc_9) & G(C1_loc_9 -> XG(\"q=[1,1]\"))";
-    formula += " & F(C2_loc_4) & F(C2_loc_12) & ((!C2_loc_12) U C2_loc_4) & "
-            "G(!C2_loc_4 | !C2_loc_12)";
+    //formula += " & F(C2_loc_4) & F(C2_loc_12) & ((!C2_loc_12) U C2_loc_4) & "
+    //        "G(!C2_loc_4 | !C2_loc_12)";
 
 
     //formula = "F(C1_loc_1) & G(!\"q=[0,0.5]\")";

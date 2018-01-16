@@ -251,20 +251,25 @@ namespace spot
       {
         // All the transitions of left_ iterator have the
         // same label, because it is a Kripke structure.
-
         std::pair<mvspot::mv_interval*,bdd> itv_res;
+        current_cond_ = bddfalse;
         
         bdd l = left_->cond();
         assert(!right_->done());
+        //std::cout << "acc: " << this->right_->acc().has(0)<< endl;
         do
           {
             bdd r = right_->cond();
             itv_res = mvspot::interval_bdd::apply_and(r, l, shared_dict);   
             //std::cout << "****RESULT " << itv_res.first->get_as_str() << "isFalse:" << itv_res.first->isFalse()<< endl;
             bdd current_cond = l & r;
+            //current_cond_ = bddfalse;
             if(!itv_res.first->isFalse() && current_cond != bddfalse)
             //if(current_cond != bddfalse)
             {
+                cost_inf_ = 2 - itv_res.first->getButtom()->getValue();
+                cost_sup_ = 2 - itv_res.first->getTop()->getValue();
+                //cout << "cost: " << cost_inf_ << " , " << cost_sup_ << endl;
                 current_cond_ = current_cond;//itv_res.second;
                 current_cond_ = bddtrue;//****************test
                 return true;
@@ -278,7 +283,7 @@ namespace spot
       bool next() override
       {
         if (left_->next())
-          return true;
+            return true;
         left_->first();
         if (right_->next())
           return next_non_false_();
@@ -289,6 +294,16 @@ namespace spot
       {
         return current_cond_;
       }
+      
+      float cost_inf() 
+      {
+          return cost_inf_;
+      }
+
+      float cost_sup() 
+      {
+          return cost_sup_;
+      }
 
       acc_cond::mark_t acc() const override
       {
@@ -297,6 +312,8 @@ namespace spot
 
     protected:
       bdd current_cond_;
+      float cost_inf_ = 999999999;
+      float cost_sup_ = 999999999;
     };
 
   } // anonymous
@@ -447,7 +464,155 @@ namespace spot
                                             right_init_->clone(), p);
   }
 //--------------------------
+
+class costcomparison
+{
+  bool reverse;
+public:
+  costcomparison(const bool& revparam=true)
+    {reverse=revparam;}
+  bool operator() (const std::pair<const spot::state*,float>& lhs, const std::pair<const spot::state*,float>& rhs) const
+  {
+    if (reverse) return (lhs.second > rhs.second);
+    else return (lhs.second < rhs.second);
+  }
+};  
+
+template<
+    class T,
+    class Container = std::vector<T>,
+    class Compare = costcomparison//std::less<typename Container::value_type>
+> class MvQueue : public std::priority_queue<T, Container, Compare>
+{
+public:
+    typedef typename
+        std::priority_queue<
+        T,
+        Container,
+        Compare>::container_type::const_iterator const_iterator;
+
+    bool find_replace(const T&val) 
+    {
+        auto first = this->c.cbegin();
+        auto last = this->c.cend();
+        while (first!=last) {
+            if ((*first).first->hash()==val.first->hash() && (*first).second>val.second){
+                //this->c.erase(*first);
+               
+                //this->c.erase(std::remove(this->c.cbegin(), this->c.cend(), (*first)), this->c.cend());
+                //this->c.push_back(val);
+                return true;
+            }
+            ++first;
+        }
+        return false;
+    }
+    
+    const_iterator begin() const {
+        return this->c.cbegin();
+    }
+
+    const_iterator end() const {
+        return this->c.cend();
+    }
+
+};
+
+class minimal_cost {
+    typedef MvQueue<std::pair<const spot::state*,float>, 
+     std::vector<std::pair<const spot::state*,float>>, costcomparison> prqueue;
+    using spair = std::pair<const spot::state*,float>;
+public:
+    minimal_cost(spot::twa_product_ptr twa_prd){
+        twa_prd_ = twa_prd;
+    }
+    
+    void find_optimal_path() {
+        todo = prqueue();
+        //std::map<float,const spot::state*> exmplore = std::map<float,const spot::state*>();
+        
+        //std::set<const spot::state*> visited = std::set<const spot::state*>();
+        std::set<size_t> visited = std::set<size_t>();
+        //std::map<const spot::state*,const spot::state*> reverse = std::map<const spot::state*,const spot::state*>();
+        std::map<size_t,size_t> reverse = std::map<size_t,size_t>();
+        std::map<size_t,const spot::state*> reverse_state = std::map<size_t,const spot::state*>();
+        size_t target;
+        size_t start;
+        //todo.push(std::make_pair(twa_prd_->get_init_state(),0));
+        std::pair<const spot::state*,float> item = 
+                std::make_pair(twa_prd_->get_init_state(),0);
+        std::cout << "init: " << twa_prd_->format_state(twa_prd_->get_init_state()) << endl;
+        todo.push(item);
+        //visited.insert(item.first);
+        start = item.first->hash();
+        visited.insert(item.first->hash());
+        reverse[item.first->hash()]=item.first->hash();
+        reverse_state[item.first->hash()]=item.first;
+        bool found_plan = false;
+        while(!todo.empty())
+        {
+            spair node = todo.top();
+            todo.pop();
+            visited.insert(node.first->hash());
+            twa_succ_iterator_product_kripke* tit = 
+                    static_cast<twa_succ_iterator_product_kripke*>
+                    (twa_prd_->succ_iter(node.first));
+            if(!tit->first())
+                continue;
+            while(!tit->done()){
+                reverse_state[tit->dst()->hash()] = tit->dst();
+                if(twa_prd_->right_acc().accepting(tit->acc()))
+                //if(tit->acc().has(0))
+                {
+                    target = tit->dst()->hash();
+                    reverse[target] = node.first->hash();
+                    found_plan = true;
+                    break;
+                }
+                if(visited.find(tit->dst()->hash())==visited.end()){
+                    reverse[tit->dst()->hash()] = node.first->hash();
+                    todo.push(std::make_pair(tit->dst(), node.second + tit->cost_inf()));
+                    //visited.insert(tit->dst()->hash());
+                }else{
+                    //todo.find_replace(std::make_pair(tit->dst(), node.second + tit->cost_inf()));
+                   // reverse[tit->dst()->hash()] = node.first->hash();
+                    //if(todo.find_replace(std::make_pair(tit->dst(), node.second + tit->cost_inf())))
+                    //    cout << "updated node\n";
+                }
+                tit->next();    
+                //if(!tit->next())  break;
+            }
+            if(found_plan)
+                break;
+        }
+        if(found_plan){
+            std::cout << "\nFOUND PLAN ****\n" << "reverse size: " << reverse.size() << " todo size: " << todo.size() << endl;
+            //while(!todo.empty()){
+            //    std::cout << "todo: " << twa_prd_->format_state(todo.top().first) << " cost: " << todo.top().second << endl;
+            //    todo.pop();
+            //}
+            size_t st = target;
+            while(st != start){
+                cout << twa_prd_->format_state(reverse_state[st]) << endl;//twa_prd_->format_state(st) << endl;
+                st = reverse[st];
+            }
+            cout << twa_prd_->format_state(reverse_state[st]) << endl;//twa_prd_->format_state(st) << endl;
+            //for(std::vector<const spot::state*>::iterator it = path.begin(); it!=path.end(); ++it){
+            //    cout << twa_prd_->format_state((*it)) << endl;
+            //}
+        }else{
+            std::cout << "\nNOT FOUND PLAN ****\n";
+        }
+    }
+    
+private:
+    spot::twa_product_ptr twa_prd_;
+    //auto cmp = [](std::pair<spot::state*,float> left, std::pair<spot::state*,float> right) 
+    //{ return (left.second) < (right.second);};
+    prqueue todo;//(costcomparison);        
+};  
   
+
   //twa.cc
   
     // Remove Fin-acceptance and alternation.
@@ -472,6 +637,11 @@ namespace spot
       other = remove_fin_maybe(other);
     else
       a = remove_fin_maybe(a);
+    //-------
+    minimal_cost minc(mv::spot::otf_product(a, other));
+    minc.find_optimal_path();
+    exit(0);
+    //-------
     auto run = mv::spot::otf_product(a, other)->accepting_run();
     //auto run = spot::otf_product(a, other)->accepting_run();
     if (!run)
@@ -480,13 +650,3 @@ namespace spot
   }
 }//spot namespace
 //}//mv namespace
-/*
-namespace mvspot{
-  mv_twa_product::mv_twa_product(const spot::const_twa_ptr& left, const spot::const_twa_ptr& right, mvspot::mv_interval* intervals=0)
-    : twa_product(left, right)
-  {
-      intervals_ = intervals;
-  }
-    
-}
- * */

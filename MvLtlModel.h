@@ -43,7 +43,7 @@
 #include <spot/twa/bdddict.hh>
 #include <spot/tl/apcollect.hh>
 #include <bddx.h>
-
+#include <queue>
 
 using namespace std;
 //using namespace spot;
