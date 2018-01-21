@@ -24,12 +24,39 @@ const bool COLLISION_AVOIDANCE = true;
 const std::string collision_symbol = "col_avo";
 static spot::bdd_dict_ptr shared_dict = spot::make_bdd_dict();
 static mvspot::mv_interval* shared_intervals = new mvspot::mv_interval("q");
+extern spot::twa_graph_ptr shared_formula_graph;
 
+class geo_pos{
+public:
+    geo_pos(int x, int y){
+        x_ = x;
+        y_ = y;
+    };
+    int x_;
+    int y_;
+};
+
+//must be filled offline based on the road network geometric
+extern std::map<int, geo_pos*>* geo_locations;  
+
+enum symbol_type{
+    POSITIVE=2, NEGATIVE=1, BOTH=3
+};
+
+struct symbol_stc{
+    int loc;
+    symbol_type type;
+};
 
 float* convert_formula_to_interval(const bdd &cond);
 mvspot::mv_interval* convert_formula_to_interval(const bdd &cond, 
         mvspot::mv_interval* intervals);
 
+std::map<const spot::state*, std::map<int,std::list<symbol_stc>*>*>*
+    compute_all_locations_of_formula(const spot::const_twa_ptr&  f_twa);
+
+std::map<const spot::twa_graph_state*, std::map<int,std::list<symbol_stc>*>*>*
+    compute_all_locations_of_graph_formula(const spot::const_twa_graph_ptr&  f_twa);
 
 class marine_robot_state : public spot::state {
 private:

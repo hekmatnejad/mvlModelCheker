@@ -30,6 +30,238 @@ float* convert_formula_to_interval(const bdd &cond) {
     return res;
 }
 
+
+void
+extract_location_from_formula(formula f, std::map<int,std::list<symbol_stc>*>*& list, const bdd_dict_ptr& d) {
+    auto recurse = [&list, &d](formula f) {
+        return extract_location_from_formula(f, list, d);
+    };
+    switch (f.kind()) {
+        case op::ff:
+            return ;
+        case op::tt:
+            return ;
+        case op::eword:
+        case op::Star:
+        case op::FStar:
+        case op::F:
+        case op::G:
+        case op::X:
+        case op::Closure:
+        case op::NegClosure:
+        case op::NegClosureMarked:
+        case op::U:
+        case op::R:
+        case op::W:
+        case op::M:
+        case op::UConcat:
+        case op::EConcat:
+        case op::EConcatMarked:
+        case op::Concat:
+        case op::Fusion:
+        case op::AndNLM:
+        case op::OrRat:
+        case op::AndRat:
+        case op::Xor:
+        case op::Implies:
+        case op::Equiv:
+            SPOT_UNIMPLEMENTED();
+        case op::ap:
+            if(f.ap_name().find("_loc_") != std::string::npos){
+                int id = std::stoi(f.ap_name().substr(1,f.ap_name().find_first_of("_")-1));
+                cout << "ID: " << id << " " << f.ap_name() << endl;
+                std::list<symbol_stc>* stc_list;
+                if( (*list)[id] != 0)
+                {
+                    stc_list = (*list)[id];
+                }
+                else
+                {
+                    stc_list = new std::list<symbol_stc>();
+                }
+                int loc = std::stoi(f.ap_name().substr(f.ap_name().find_last_of("_")+1,
+                        f.ap_name().size() - f.ap_name().find_last_of("_")-1));
+                symbol_stc stc;
+                bool found = false;
+                for(std::list<symbol_stc>::iterator it = stc_list->begin(); it != stc_list->end(); ++it)
+                    if((*it).loc==loc){
+                        stc = (*it);
+                        found = true;
+                    }
+                    //stc = symbol_stc();
+                if(stc.type == symbol_type::NEGATIVE)
+                    stc.type = symbol_type::BOTH;
+                else
+                    stc.type = symbol_type::POSITIVE;
+                //cout << "loc: " << loc << endl;
+                stc.loc = loc;
+                if(!found)
+                    stc_list->push_back(stc);
+                (*list)[id] = stc_list;
+            }
+            return;
+        case op::Not:
+            if(f[0].ap_name().find("_loc_") != std::string::npos){
+                int id = std::stoi(f[0].ap_name().substr(1,f[0].ap_name().find_first_of("_")-1));
+                cout << "ID: " << id << " " << f[0].ap_name() << endl;
+                std::list<symbol_stc>* stc_list;
+                if( (*list)[id] != 0)
+                {
+                    stc_list = (*list)[id];
+                }
+                else
+                {
+                    stc_list = new std::list<symbol_stc>();
+                }
+                int loc = std::stoi(f[0].ap_name().substr(f[0].ap_name().find_last_of("_")+1,
+                        f[0].ap_name().size() - f[0].ap_name().find_last_of("_")-1));
+                symbol_stc stc;
+                bool found = false;
+                for(std::list<symbol_stc>::iterator it = stc_list->begin(); it != stc_list->end(); ++it)
+                    if((*it).loc==loc){
+                        stc = (*it);
+                        found = true;
+                    }
+                if(stc.type == symbol_type::POSITIVE)
+                    stc.type = symbol_type::BOTH;
+                else
+                    stc.type = symbol_type::NEGATIVE;
+                //cout << "loc: " << loc << endl;
+                stc.loc = loc;
+                if(!found)
+                    stc_list->push_back(stc);
+                (*list)[id] = stc_list;
+            }
+            return;
+        case op::And:
+        case op::Or:
+        {
+            unsigned s = f.size();
+            for (unsigned n = 0; n < s; ++n)
+                recurse(f[n]);
+            return;
+        }
+    }
+    SPOT_UNREACHABLE();
+    return ;
+}
+
+
+std::map<const spot::state*, std::map<int,std::list<symbol_stc>*>*>*
+    compute_all_locations_of_formula(const spot::const_twa_ptr& aut){
+    
+    std::cout << "Computing the map of locations from the formula automaton.\n";
+    
+    std::map<const spot::state*, std::map<int,std::list<symbol_stc>*>*>* res;
+    res = new std::map<const spot::state*, std::map<int,std::list<symbol_stc>*>*>();
+    /*
+     * DFS traversing the automaton
+     */
+    spot::state_unicity_table seen;
+    std::stack<std::pair<const spot::state*,
+            spot::twa_succ_iterator*>> todo;
+
+    // push receives a newly-allocated state and immediately store it in
+    // seen.  Therefore any state on todo is already in seen and does
+    // not need to be destroyed.
+    auto push = [&](const spot::state * s) {
+        if (seen.is_new(s)) {
+            spot::twa_succ_iterator* it = aut->succ_iter(s);
+            if (it->first())
+                todo.emplace(s, it);
+            else // No successor for s
+                aut->release_iter(it);
+        }
+    };
+    push(aut->get_init_state());
+    while (!todo.empty()) {
+        const spot::state* src = todo.top().first;
+        spot::twa_succ_iterator* srcit = todo.top().second;
+        const spot::state* dst = srcit->dst();
+        
+        //---------------------//
+        std::cout << spot::bdd_format_formula(shared_dict, srcit->cond()) << endl;
+        std::map<int,std::list<symbol_stc>*>* map_loc = new std::map<int,std::list<symbol_stc>*>();
+        spot::formula f = spot::bdd_to_formula(srcit->cond(), shared_dict);
+        
+        extract_location_from_formula(f, map_loc, shared_dict);
+        
+        //cout << "--- " << (*map_loc)[1]->size() << endl;
+        (*res)[src] = map_loc;
+        //---------------------//
+        
+        std::cout << aut->format_state(src) << "->"
+                << aut->format_state(dst) << '\n';
+        // Advance the iterator, and maybe release it.
+        if (!srcit->next()) {
+            aut->release_iter(srcit);
+            todo.pop();
+        }
+        push(dst);
+    }    
+    
+    return res;
+}
+
+std::map<const spot::twa_graph_state*, std::map<int, std::list<symbol_stc>*>*>*
+compute_all_locations_of_graph_formula(const spot::const_twa_graph_ptr& aut) {
+    
+    std::cout << "Computing the map of locations from the formula graph automaton.\n";
+    
+    std::map<const spot::twa_graph_state*, std::map<int,std::list<symbol_stc>*>*>* res;
+    res = new std::map<const spot::twa_graph_state*, std::map<int,std::list<symbol_stc>*>*>();
+    /*
+     * DFS traversing the automaton
+     */
+    spot::state_unicity_table seen;
+    std::stack<std::pair<const spot::twa_graph_state*,
+            spot::twa_succ_iterator*>> todo;
+
+    // push receives a newly-allocated state and immediately store it in
+    // seen.  Therefore any state on todo is already in seen and does
+    // not need to be destroyed.
+    auto push = [&](const spot::twa_graph_state * s) {
+        if (seen.is_new(s)) {
+            spot::twa_succ_iterator* it = aut->succ_iter(s);
+            if (it->first())
+                todo.emplace(s, it);
+            else // No successor for s
+                aut->release_iter(it);
+        }
+    };
+
+    push(aut->get_init_state());
+
+    while (!todo.empty()) {
+        const spot::twa_graph_state* src = todo.top().first;
+        spot::twa_succ_iterator* srcit = todo.top().second;
+        const spot::twa_graph_state* dst = down_cast<const spot::twa_graph_state*>(srcit->dst());
+        
+        //---------------------//
+        std::cout << spot::bdd_format_formula(shared_dict, srcit->cond()) << endl;
+        std::map<int,std::list<symbol_stc>*>* map_loc = new std::map<int,std::list<symbol_stc>*>();
+        spot::formula f = spot::bdd_to_formula(srcit->cond(), shared_dict);
+        
+        extract_location_from_formula(f, map_loc, shared_dict);
+        
+        cout << "--- " << (*map_loc)[2]->size() << endl;
+        (*res)[src] = map_loc;
+        //---------------------//
+        
+        std::cout << aut->format_state(src) << "->"
+                << aut->format_state(dst) << '\n';
+        // Advance the iterator, and maybe release it.
+        if (!srcit->next()) {
+            aut->release_iter(srcit);
+            todo.pop();
+        }
+        push(dst);
+    }    
+    
+    return res;
+}
+
+
 mvspot::mv_interval* convert_formula_to_interval(const bdd &cond, 
         mvspot::mv_interval* intervals) {
     //cout<<bdd_to_formula(cond,shared_dict)<<endl;
@@ -252,7 +484,7 @@ mvspot::mv_interval* mvspot::interval_bdd::shared_intervals_ = spot::twa::shared
             from_init_state[i] = init_state_[i];
             spot::internal::twa_succ_iterable k = 
                     org_model_->succ(org_model_->state_from_number(init_state_[i]));
-        cout << bdd_to_formula((*k.begin())->cond(),shared_dict) <<endl;
+        //cout << bdd_to_formula((*k.begin())->cond(),shared_dict) <<endl;
 
             if ((*k.begin())->cond() != bddfalse) {
                 mvspot::mv_interval* tmp_itv = 
@@ -264,7 +496,7 @@ mvspot::mv_interval* mvspot::interval_bdd::shared_intervals_ = spot::twa::shared
             }
         }
         if(itv==nullptr){
-            cout << "!!!";
+            cout << "!!! States must have ONE interval for now. Fix this in future. -> marine_robot_kripke::get_init_state\n";
             exit(0);
         }
         marine_robot_state* ns = new marine_robot_state(init_state, from_init_state, org_model_, itv);

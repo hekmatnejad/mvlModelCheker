@@ -45,11 +45,16 @@ void dfs(spot::const_twa_graph_ptr aut, bdd query);
 static spot::parsed_aut_ptr read_model_aut;
 static spot::kripke_graph_ptr kg_model;
 static spot::twa_graph_ptr aut_model;
+
+std::map<int, geo_pos*>* geo_locations;  
+
+//spot::twa_graph_ptr shared_formula_graph;
+
 /*
  * 
  */
 int main(int argc, char** argv) {
-
+    
     std::cout << "started...\n";
     cout << mvspot::getVersion() << "\n" << mvspot::getBuild() << "\n";
 
@@ -73,6 +78,28 @@ std:
     kg_model = read_model_aut->ks;
     aut_model = read_model_aut->aut;
 
+    geo_locations = new std::map<int, geo_pos*>();
+    (*geo_locations)[0] = new geo_pos(0,5);
+    (*geo_locations)[1] = new geo_pos(1,5);
+    (*geo_locations)[2] = new geo_pos(2,5);
+    (*geo_locations)[3] = new geo_pos(3,5);
+    (*geo_locations)[4] = new geo_pos(4,5);
+    (*geo_locations)[5] = new geo_pos(2,4);
+    (*geo_locations)[6] = new geo_pos(2,3);
+    (*geo_locations)[7] = new geo_pos(2,2);
+    (*geo_locations)[8] = new geo_pos(2,1);
+    (*geo_locations)[9] = new geo_pos(2,0);
+    (*geo_locations)[10] = new geo_pos(3,1);
+    (*geo_locations)[11] = new geo_pos(0,4);
+    (*geo_locations)[12] = new geo_pos(0,3);
+    (*geo_locations)[13] = new geo_pos(1,3);
+    (*geo_locations)[14] = new geo_pos(3,3);
+    (*geo_locations)[15] = new geo_pos(4,3);
+    (*geo_locations)[16] = new geo_pos(4,4);
+    (*geo_locations)[17] = new geo_pos(3,5);
+    (*geo_locations)[18] = new geo_pos(1,3);
+    (*geo_locations)[19] = new geo_pos(3,3);
+    
 
     model_4("");
 
@@ -192,6 +219,7 @@ void model_4(string formula) {
     spot::formula f = pf.f;
     spot::twa_graph_ptr af = spot::translator(shared_dict).run(f);
     Util::write2File("new_formula.dot", af);
+    shared_formula_graph = af;
     
     mvspot::mv_interval* shared_intervals = mvspot::create_interval_set("certainty", "q", 5);
     shared_intervals->add_interval("q=[1,1]",1,1);

@@ -39,6 +39,8 @@
 using namespace std;
 
 #define _MAX_COST  5555
+#define _MAX_DIST  100
+spot::twa_graph_ptr shared_formula_graph;
 
 //namespace mv{
 
@@ -48,8 +50,8 @@ namespace spot
 
   static spot::bdd_dict_ptr shared_dict;  
   static mvspot::mv_interval* shared_intervals;
-  static const spot::kripke* shared_kripke;
-    
+  static std::map<const spot::twa_graph_state*, std::map<int,std::list<symbol_stc>*>*>* shared_locs;
+  //std::map<int, geo_pos> geo_locations;  
   ////////////////////////////////////////////////////////////
   // state_product
 
@@ -250,6 +252,50 @@ namespace spot
       {
       }
 
+//      float find_dist_to_locs(unsigned* state_num, const spot::state* f_state){
+//          std::map<int,std::list<symbol_stc>*>* s_map = (*shared_locs)[f_state];
+//          for(int i=0; i<NUM_CARS; i++)
+//          {
+//              std::list<symbol_stc>* s_list = (*s_map)[i];
+//              for(std::list<symbol_stc>::iterator it = s_list->begin(); it != s_list->end(); ++it)
+//              {
+//                  //if((*it).loc == state_num)
+//                  {
+//                      
+//                  }
+//              }
+//          }
+//          return 0;
+//      }
+
+     float find_dist_to_locs_graph(unsigned* state_num, const spot::twa_graph_state* f_state){
+
+         std::map<int,std::list<symbol_stc>*>* s_map = (*shared_locs)[f_state];
+         int min_dist[NUM_CARS];
+         float res = 0;
+          for(int i=0; i<NUM_CARS; i++)
+          {
+              min_dist[i] = _MAX_DIST;
+              bool found = false;
+              std::list<symbol_stc>* s_list = (*s_map)[i+1];
+              for(std::list<symbol_stc>::iterator it = s_list->begin(); it != s_list->end(); ++it)
+              {
+                  if((*it).type!=symbol_type::NEGATIVE){
+                      int dist = std::pow((*geo_locations)[state_num[i]]->x_ - (*geo_locations)[(*it).loc]->x_ , 2);  
+                      dist += std::pow((*geo_locations)[state_num[i]]->y_ - (*geo_locations)[(*it).loc]->y_, 2);  
+                      if(dist < min_dist[i]){
+                          min_dist[i] = dist;
+                          found = true;
+                      }
+                  }
+              }
+              if(found)
+                  res += min_dist[i];
+          }
+          return res;
+      }
+
+      
       bool next_non_false_() override
       {
         // All the transitions of left_ iterator have the
@@ -270,6 +316,13 @@ namespace spot
                 cost_sup_ = 2 + 1 - itv_res.first->getTop()->getValue();
                 //cout << "cost: " << cost_inf_ << " , " << cost_sup_ << endl;
                 
+                const marine_robot_state* mrs = static_cast<const marine_robot_state*>(left_->dst());
+            
+                loc_dist_ = find_dist_to_locs_graph(mrs->get_state_num(),
+                        shared_formula_graph->state_from_number(shared_formula_graph->edge_storage(right_).src));
+                //std::cout << "min_dist: " << loc_dist_ << endl;                
+                
+                //cout << "**** " << shared_formula_graph->format_state(shared_formula_graph->state_from_number(shared_formula_graph->edge_storage(right_).src)) << endl;
                 //current_cond_ = current_cond;//itv_res.second;
                 current_cond_ = bddtrue;//****************test: for printout purposes
                 return true;
@@ -307,6 +360,11 @@ namespace spot
       {
           return cost_sup_;
       }
+      
+      float loc_dist()
+      {
+          return loc_dist_;
+      }
 
       acc_cond::mark_t acc() const override
       {
@@ -317,6 +375,7 @@ namespace spot
       bdd current_cond_;
       float cost_inf_ = _MAX_COST;
       float cost_sup_ = _MAX_COST;
+      float loc_dist_ = _MAX_DIST;
     };
 
   } // anonymous
@@ -365,11 +424,16 @@ namespace spot
     copy_ap_of(left_);
     copy_ap_of(right_);
     
-    //mvspot::mv_kripke* mvk = dynamic_cast<mvspot::mv_kripke*>(&left);
     //***************//
     shared_dict = get_dict();
-    //shared_kripke = dynamic_cast<const kripke*>(left_.get());
-    //std::cout << "*** kripke: " << shared_kripke << endl;
+    //shared_locs = compute_all_locations_of_formula(right_);
+    shared_locs = compute_all_locations_of_graph_formula(shared_formula_graph);
+
+    //TEST
+    std::list<symbol_stc>* tst_list = (*(*shared_locs)[shared_formula_graph->get_init_state()])[2];
+    for(std::list<symbol_stc>::iterator it = tst_list->begin(); it != tst_list->end(); ++it)
+        cout << ">>>>> " << (*it).loc << endl;
+    
     
     std::cout << "*** in -> twa_product::twa_product\n";
     assert(num_sets() == 0);
@@ -539,7 +603,8 @@ public:
     }
     
     void find_optimal_path() {
-        std::multimap<float,const spot::state*> explore = std::multimap<float,const spot::state*>();
+        std::multimap<float,const spot::state*> explore = 
+                std::multimap<float,const spot::state*>();
         std::priority_queue<float, std::vector<float>, std::greater<float>> 
                 cost_q = std::priority_queue<float, std::vector<float>, std::greater<float>>();
         std::set<size_t> visited = std::set<size_t>();
