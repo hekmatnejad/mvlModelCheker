@@ -43,6 +43,7 @@ Contributor(s):
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
+      <itemPath>KripkeModel.h</itemPath>
       <itemPath>ModelGenerator.h</itemPath>
       <itemPath>MvLtlModel.h</itemPath>
       <itemPath>Util.h</itemPath>
@@ -57,6 +58,7 @@ Contributor(s):
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
+      <itemPath>KripkeModel.cpp</itemPath>
       <itemPath>MvLtlModel.cpp</itemPath>
       <itemPath>Util.cpp</itemPath>
       <itemPath>main.cpp</itemPath>
@@ -108,6 +110,10 @@ Contributor(s):
           <commandLine>-lspot -lbddx</commandLine>
         </linkerTool>
       </compileType>
+      <item path="KripkeModel.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="KripkeModel.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="ModelGenerator.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="MvLtlModel.cpp" ex="false" tool="1" flavor2="0">
@@ -172,6 +178,10 @@ Contributor(s):
           <commandLine>-lspot -lbddx</commandLine>
         </linkerTool>
       </compileType>
+      <item path="KripkeModel.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="KripkeModel.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="ModelGenerator.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="MvLtlModel.cpp" ex="false" tool="1" flavor2="0">

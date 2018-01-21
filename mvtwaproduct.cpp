@@ -34,9 +34,11 @@
 #include <spot/twaalgos/word.hh>
 #include "mvtwaproduct.h"
 //#include "mv_interval.h"
-
+#include "KripkeModel.h"
 
 using namespace std;
+
+#define _MAX_COST  5555
 
 //namespace mv{
 
@@ -46,6 +48,7 @@ namespace spot
 
   static spot::bdd_dict_ptr shared_dict;  
   static mvspot::mv_interval* shared_intervals;
+  static const spot::kripke* shared_kripke;
     
   ////////////////////////////////////////////////////////////
   // state_product
@@ -252,30 +255,30 @@ namespace spot
         // All the transitions of left_ iterator have the
         // same label, because it is a Kripke structure.
         std::pair<mvspot::mv_interval*,bdd> itv_res;
-        //current_cond_ = bddfalse;
-        
         bdd l = left_->cond();
         assert(!right_->done());
-        //std::cout << "acc: " << this->right_->acc().has(0)<< endl;
         do
           {
             bdd r = right_->cond();
             itv_res = mvspot::interval_bdd::apply_and(r, l, shared_dict);   
             //std::cout << "****RESULT " << itv_res.first->get_as_str() << "isFalse:" << itv_res.first->isFalse()<< endl;
             bdd current_cond = l & r;
-            //current_cond_ = bddfalse;
             if(!itv_res.first->isFalse() && current_cond != bddfalse)
             //if(current_cond != bddfalse)
             {
                 cost_inf_ = 2 + 1 - itv_res.first->getButtom()->getValue();
                 cost_sup_ = 2 + 1 - itv_res.first->getTop()->getValue();
                 //cout << "cost: " << cost_inf_ << " , " << cost_sup_ << endl;
-                current_cond_ = current_cond;//itv_res.second;
-                current_cond_ = bddtrue;//****************test
+                
+                //current_cond_ = current_cond;//itv_res.second;
+                current_cond_ = bddtrue;//****************test: for printout purposes
                 return true;
             }
           }
         while (right_->next());
+
+        current_cond_ = bddfalse;
+
         return false;
 
       }
@@ -312,8 +315,8 @@ namespace spot
 
     protected:
       bdd current_cond_;
-      float cost_inf_ = 999999999;
-      float cost_sup_ = 999999999;
+      float cost_inf_ = _MAX_COST;
+      float cost_sup_ = _MAX_COST;
     };
 
   } // anonymous
@@ -341,7 +344,7 @@ namespace spot
                                "share their bdd_dict");
     assert(get_dict() == right_->get_dict());
 
-    shared_dict = get_dict();
+    
     // If one of the side is a Kripke structure, it is easier to deal
     // with (we don't have to fix the acceptance conditions, and
     // computing the successors can be improved a bit).
@@ -363,6 +366,10 @@ namespace spot
     copy_ap_of(right_);
     
     //mvspot::mv_kripke* mvk = dynamic_cast<mvspot::mv_kripke*>(&left);
+    //***************//
+    shared_dict = get_dict();
+    //shared_kripke = dynamic_cast<const kripke*>(left_.get());
+    //std::cout << "*** kripke: " << shared_kripke << endl;
     
     std::cout << "*** in -> twa_product::twa_product\n";
     assert(num_sets() == 0);
@@ -427,7 +434,10 @@ namespace spot
     const state_product* s = down_cast<const state_product*>(state);
     return (left_->format_state(s->left())
             + " * "
-            + right_->format_state(s->right()));
+            + right_->format_state(s->right()) 
+            //+ " " + spot::bdd_format_formula(dict_, this->ap_vars()) 
+            );
+    //return (left_->format_state(s->left()));
   }
 
   state*
@@ -529,10 +539,7 @@ public:
     }
     
     void find_optimal_path() {
-        //todo = prqueue();
         std::multimap<float,const spot::state*> explore = std::multimap<float,const spot::state*>();
-        //std::priority_queue<float, std::vector<float>, std::less<float>> 
-        //cost_q = std::priority_queue<float, std::vector<float>, std::less<float>>();
         std::priority_queue<float, std::vector<float>, std::greater<float>> 
                 cost_q = std::priority_queue<float, std::vector<float>, std::greater<float>>();
         std::set<size_t> visited = std::set<size_t>();
@@ -542,8 +549,7 @@ public:
         size_t start;
         std::pair<const spot::state*,float> item = 
                 std::make_pair(twa_prd_->get_init_state(),0);
-        std::cout << "init: " << twa_prd_->format_state(twa_prd_->get_init_state()) << endl;
-        //todo.push(item);
+        std::cout << "init state: " << twa_prd_->format_state(twa_prd_->get_init_state()) << endl;
         explore.insert(std::make_pair<float,const spot::state*>(0,twa_prd_->get_init_state()));
         cost_q.push(0);
         start = item.first->hash();
@@ -577,13 +583,18 @@ public:
                 continue;
             while(!tit->done())
             {
-                reverse_state[tit->dst()->hash()] = tit->dst();
+                //reverse_state[tit->dst()->hash()] = tit->dst();
                 //if(tit->acc().has(0))
-                if(twa_prd_->right_acc().accepting(tit->acc()))
+                if(twa_prd_->right_acc().accepting(tit->acc()) && 
+                        tit->cond()!=bddfalse)
                 {
                     cout << tit->acc()<< endl;
                     target = tit->dst()->hash();
-                    reverse[target] = cs->hash();
+                    if(target!=cs->hash()){
+                        reverse[target] = cs->hash();
+                        reverse_state[target] = tit->dst();
+                    }
+
                     //reverse[target] = node.first->hash();
                     optimal_cost = min_c;
                     found_plan = true;
@@ -594,6 +605,7 @@ public:
                     cost_q.push(min_c+tit->cost_inf());
                     explore.insert(std::make_pair<float,const spot::state*>
                             (min_c+tit->cost_inf(),tit->dst()));
+                    reverse_state[tit->dst()->hash()] = tit->dst();
                     
                     //reverse[tit->dst()->hash()] = node.first->hash();
                     //todo.push(std::make_pair(tit->dst(), node.second + tit->cost_inf()));
@@ -610,20 +622,12 @@ public:
             std::cout << "\nFOUND AN OPTIMAL PLAN ****\n" << "reverse size: " << reverse.size() 
                     << " explore size: " << explore.size() 
                     << " visited size: " << visited.size() << endl;
-            //while(!todo.empty()){
-            //    std::cout << "todo: " << twa_prd_->format_state(todo.top().first) << " cost: " << todo.top().second << endl;
-            //    todo.pop();
-            //}
-//            while(!cost_q.empty()){
-//                std::cout << "cost: " << cost_q.top() << endl;
-//                cost_q.pop();
-//            }
+
             std::stack<const spot::state*> path = std::stack<const spot::state*> ();
             
             size_t st = target;
             while(st != start){
                 path.push(reverse_state[st]);
-                //cout << twa_prd_->format_state(reverse_state[st]) << endl;//twa_prd_->format_state(st) << endl;
                 st = reverse[st];
             }
             path.push(reverse_state[st]);
@@ -642,7 +646,7 @@ private:
     spot::twa_product_ptr twa_prd_;
     //auto cmp = [](std::pair<spot::state*,float> left, std::pair<spot::state*,float> right) 
     //{ return (left.second) < (right.second);};
-    prqueue todo;//(costcomparison);        
+    //prqueue todo;//(costcomparison);        
 };  
   
 
@@ -671,9 +675,11 @@ private:
     else
       a = remove_fin_maybe(a);
     //-------
+    if(true){
     minimal_cost minc(mv::spot::otf_product(a, other));
     minc.find_optimal_path();
     exit(0);
+    }
     //-------
     auto run = mv::spot::otf_product(a, other)->accepting_run();
     //auto run = spot::otf_product(a, other)->accepting_run();

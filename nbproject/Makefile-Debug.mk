@@ -35,6 +35,7 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
+	${OBJECTDIR}/KripkeModel.o \
 	${OBJECTDIR}/MvLtlModel.o \
 	${OBJECTDIR}/Util.o \
 	${OBJECTDIR}/main.o \
@@ -65,6 +66,11 @@ LDLIBSOPTIONS=
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/mvltlproject: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	g++ -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/mvltlproject ${OBJECTFILES} ${LDLIBSOPTIONS} -lspot -lbddx
+
+${OBJECTDIR}/KripkeModel.o: KripkeModel.cpp
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/KripkeModel.o KripkeModel.cpp
 
 ${OBJECTDIR}/MvLtlModel.o: MvLtlModel.cpp
 	${MKDIR} -p ${OBJECTDIR}

@@ -44,6 +44,7 @@
 #include <spot/tl/apcollect.hh>
 #include <bddx.h>
 #include <queue>
+#include <spot/twa/formula2bdd.hh>
 
 using namespace std;
 //using namespace spot;
