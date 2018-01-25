@@ -271,17 +271,18 @@ namespace spot
      float find_dist_to_locs_graph(unsigned* state_num, const spot::twa_graph_state* f_state){
 
          std::map<int,std::list<symbol_stc>*>* s_map = (*shared_locs)[f_state];
-         int min_dist[NUM_CARS];
+         float min_dist[NUM_CARS];//no need for array
          float res = 0;
           for(int i=0; i<NUM_CARS; i++)
           {
               min_dist[i] = _MAX_DIST;
               bool found = false;
               std::list<symbol_stc>* s_list = (*s_map)[i+1];
+              if(s_list!=NULL)
               for(std::list<symbol_stc>::iterator it = s_list->begin(); it != s_list->end(); ++it)
               {
                   if((*it).type!=symbol_type::NEGATIVE){
-                      int dist = std::pow((*geo_locations)[state_num[i]]->x_ - (*geo_locations)[(*it).loc]->x_ , 2);  
+                      float dist = std::pow((*geo_locations)[state_num[i]]->x_ - (*geo_locations)[(*it).loc]->x_ , 2);  
                       dist += std::pow((*geo_locations)[state_num[i]]->y_ - (*geo_locations)[(*it).loc]->y_, 2);  
                       if(dist < min_dist[i]){
                           min_dist[i] = dist;
@@ -373,9 +374,9 @@ namespace spot
 
     protected:
       bdd current_cond_;
-      float cost_inf_ = _MAX_COST;
-      float cost_sup_ = _MAX_COST;
-      float loc_dist_ = _MAX_DIST;
+      float cost_inf_ = _MAX_COST;//primary cost 
+      float cost_sup_ = _MAX_COST;//secondary cost
+      float loc_dist_ = _MAX_DIST;//A star helper
     };
 
   } // anonymous
@@ -428,11 +429,12 @@ namespace spot
     shared_dict = get_dict();
     //shared_locs = compute_all_locations_of_formula(right_);
     shared_locs = compute_all_locations_of_graph_formula(shared_formula_graph);
-
+    cout << "step completed...\n";
     //TEST
-    std::list<symbol_stc>* tst_list = (*(*shared_locs)[shared_formula_graph->get_init_state()])[2];
-    for(std::list<symbol_stc>::iterator it = tst_list->begin(); it != tst_list->end(); ++it)
-        cout << ">>>>> " << (*it).loc << endl;
+    //std::list<symbol_stc>* tst_list = 
+    //        (*(*shared_locs)[shared_formula_graph->get_init_state()])[1];
+    //for(std::list<symbol_stc>::iterator it = tst_list->begin(); it != tst_list->end(); ++it)
+    //    cout << ">>>>> " << (*it).loc << endl;
     
     
     std::cout << "*** in -> twa_product::twa_product\n";
@@ -539,6 +541,66 @@ namespace spot
   }
 //--------------------------
 
+class a_star_node{
+public:
+    a_star_node(size_t state_hash, float primary_cost, float a_star_cost){
+        state_hash_ = state_hash;
+        primary_cost_ = primary_cost;
+        a_star_cost_ = a_star_cost;
+    }
+    a_star_node(const a_star_node &node){
+        state_hash_ = node.state_hash_;
+        primary_cost_ = node.primary_cost_;
+        a_star_cost_ = node.a_star_cost_;
+    }
+    size_t state_hash_;
+    float primary_cost_;
+    float a_star_cost_;
+};
+  
+class a_star_costcomparison
+{
+  bool reverse;
+public:
+  a_star_costcomparison(const bool& revparam=true)//must be true
+    {reverse=revparam;}
+  bool operator() (const a_star_node& lhs, const a_star_node& rhs) const
+  {
+//    if (reverse) 
+//    {
+//        if(lhs.primary_cost_ > rhs.primary_cost_)
+//            return true;
+//        else
+//            return false;
+//    }
+//    else{ 
+//        if(lhs.primary_cost_ < rhs.primary_cost_)
+//            return true;
+//        else 
+//            return false;
+//    }
+      
+    if (reverse) 
+    {
+        if(lhs.primary_cost_ > rhs.primary_cost_ ||
+              (lhs.primary_cost_ == rhs.primary_cost_ && 
+                lhs.a_star_cost_ > rhs.a_star_cost_)  )
+            return true;
+        else
+            return false;
+    }
+    else{ 
+        if(lhs.primary_cost_ < rhs.primary_cost_ ||
+              (lhs.primary_cost_ == rhs.primary_cost_ && 
+                lhs.a_star_cost_ < rhs.a_star_cost_)  )
+            return true;
+        else 
+            return false;
+    }
+ 
+  }
+};  
+
 class costcomparison
 {
   bool reverse;
@@ -552,51 +614,8 @@ public:
   }
 };  
 
-template<
-    class T,
-    class Container = std::vector<T>,
-    class Compare = costcomparison//std::less<typename Container::value_type>
-> class MvQueue : public std::priority_queue<T, Container, Compare>
-{
-public:
-    typedef typename
-        std::priority_queue<
-        T,
-        Container,
-        Compare>::container_type::const_iterator const_iterator;
-
-    bool find_replace(const T&val) 
-    {
-        auto first = this->c.cbegin();
-        auto last = this->c.cend();
-        while (first!=last) {
-            if ((*first).first->hash()==val.first->hash() && (*first).second>val.second){
-                //this->c.erase(*first);
-               
-                //this->c.erase(std::remove(this->c.cbegin(), this->c.cend(), (*first)), this->c.cend());
-                //this->c.push_back(val);
-                return true;
-            }
-            ++first;
-        }
-        return false;
-    }
-    
-    const_iterator begin() const {
-        return this->c.cbegin();
-    }
-
-    const_iterator end() const {
-        return this->c.cend();
-    }
-
-};
-
 class minimal_cost {
-    typedef MvQueue<std::pair<const spot::state*,float>, 
-     std::vector<std::pair<const spot::state*,float>>, costcomparison> prqueue;
-    using spair = std::pair<const spot::state*,float>;
-    typedef std::pair<float,const spot::state*> mpair;
+
 public:
     minimal_cost(spot::twa_product_ptr twa_prd){
         twa_prd_ = twa_prd;
@@ -706,6 +725,120 @@ public:
             std::cout << "\nNOT FOUND PLAN ****\n";
         }
     }
+
+
+    void find_optimal_path_A_star() {
+        
+        //std::multimap<float,const spot::state*> 
+        //        explore = std::multimap<float,const spot::state*>();
+        //std::priority_queue<float, std::vector<float>, std::greater<float>> 
+        //        cost_q = std::priority_queue<float, std::vector<float>, std::greater<float>>();
+        std::priority_queue<a_star_node, std::vector<a_star_node>, a_star_costcomparison>
+                todo_q = std::priority_queue<a_star_node, std::vector<a_star_node>, a_star_costcomparison>();
+        std::set<size_t> visited = std::set<size_t>();
+        std::map<size_t,size_t> reverse = std::map<size_t,size_t>();
+        std::map<size_t,const spot::state*> 
+                reverse_state = std::map<size_t,const spot::state*>();
+        size_t target;
+        size_t start;
+        std::pair<const spot::state*,float> item = 
+                std::make_pair(twa_prd_->get_init_state(),0);
+        std::cout << "init state: " << twa_prd_->format_state(twa_prd_->get_init_state()) << endl;
+        //explore.insert(std::make_pair<float,const spot::state*>(0,twa_prd_->get_init_state()));
+        todo_q.push(a_star_node(twa_prd_->get_init_state()->hash(),0,0));
+        //cost_q.push(0);
+        start = item.first->hash();
+        visited.insert(item.first->hash());
+        reverse[item.first->hash()] = item.first->hash();
+        reverse_state[item.first->hash()] = item.first;
+        bool found_plan = false;
+        const spot::state* cs;//current state
+        float min_c = 0;
+        float optimal_cost = -1;
+        while(!todo_q.empty())
+        //while(!explore.empty())
+        {
+            //min_c = cost_q.top();
+            //cost_q.pop();
+            //cs = explore.find(min_c)->second;
+            //explore.erase(explore.find(min_c));
+            //visited.insert(cs->hash());
+            
+            //cout << todo_q.top().a_star_cost_ << endl;
+
+            a_star_node node(todo_q.top());
+            todo_q.pop();
+            visited.insert(node.state_hash_);
+            cs = reverse_state[node.state_hash_];
+            min_c = node.primary_cost_;
+            visited.insert(cs->hash());
+            
+            twa_succ_iterator_product_kripke* tit = 
+                    static_cast<twa_succ_iterator_product_kripke*>
+                    (twa_prd_->succ_iter(cs));
+            
+            if(!tit->first())
+                continue;
+            
+            while(!tit->done())
+            {
+                if(twa_prd_->right_acc().accepting(tit->acc()) && 
+                        tit->cond() != bddfalse)
+                {
+                    cout << "cond: " << tit->acc() << endl;
+                    target = tit->dst()->hash();
+                    if(target!=cs->hash()){
+                        reverse[target] = cs->hash();
+                        reverse_state[target] = tit->dst();
+                    }
+
+                    optimal_cost = min_c;
+                    found_plan = true;
+                    break;
+                }
+                if(visited.find(tit->dst()->hash())==visited.end()){
+                    reverse[tit->dst()->hash()] = cs->hash();
+                    //cost_q.push(min_c+tit->cost_inf());
+                    //explore.insert(std::make_pair<float,const spot::state*>
+                    //        (min_c+tit->cost_inf(),tit->dst()));
+                    todo_q.push(a_star_node(tit->dst()->hash(),min_c+tit->cost_inf(),tit->loc_dist()));
+                    reverse_state[tit->dst()->hash()] = tit->dst();
+                    
+                }else{
+                }
+                tit->next();    
+            }
+            if(found_plan)
+                break;
+        }
+        if(found_plan){
+            std::cout << "\nFOUND AN OPTIMAL PLAN ****\n" << "reverse size: " << reverse.size() 
+                    << " todo_q size: " << todo_q.size() 
+                    << " visited size: " << visited.size() << endl;
+
+            std::stack<const spot::state*> path = std::stack<const spot::state*> ();
+            
+            size_t st = target;
+            while(st != start){
+                path.push(reverse_state[st]);
+                st = reverse[st];
+            }
+            path.push(reverse_state[st]);
+            //cout << twa_prd_->format_state(reverse_state[st]) << endl;//twa_prd_->format_state(st) << endl;
+            while(!path.empty()){
+                cout << twa_prd_->format_state(path.top()) << endl;//twa_prd_->format_state(st) << endl;
+                path.pop();
+            }
+            cout << "\noptimal path cost: " << optimal_cost << endl;
+//            for(int i=0; i<100; i++){
+//                cout << todo_q.top().a_star_cost_ << endl;
+//                todo_q.pop();
+//            }
+        }else{
+            std::cout << "\nNOT FOUND PLAN ****\n";
+        }
+    }
+
     
 private:
     spot::twa_product_ptr twa_prd_;
@@ -742,7 +875,8 @@ private:
     //-------
     if(true){
     minimal_cost minc(mv::spot::otf_product(a, other));
-    minc.find_optimal_path();
+    //minc.find_optimal_path();
+    minc.find_optimal_path_A_star();
     exit(0);
     }
     //-------

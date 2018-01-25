@@ -199,6 +199,10 @@ void model_4(string formula) {
     formula += " & F(C2_loc_4) & F(C2_loc_12) & ((!C2_loc_12) U C2_loc_4) "
             " & G(!C2_loc_4 | !C2_loc_12)"
             "";
+
+    //formula = "G(\"q=[0.5,1]\") &  F(C2_loc_4) & F(C2_loc_12) & ((!C2_loc_12) U C2_loc_4) "
+    //        " & G(!C2_loc_4 | !C2_loc_12)"
+    //        "";
     
     //formula = "C1_loc_5 & X C1_loc_6 & XX C1_loc_7";
 

@@ -32,7 +32,9 @@ float* convert_formula_to_interval(const bdd &cond) {
 
 
 void
-extract_location_from_formula(formula f, std::map<int,std::list<symbol_stc>*>*& list, const bdd_dict_ptr& d) {
+extract_location_from_formula(formula f, std::map<int,std::list<symbol_stc>*>*& 
+            list, const bdd_dict_ptr& d) 
+{
     auto recurse = [&list, &d](formula f) {
         return extract_location_from_formula(f, list, d);
     };
@@ -148,7 +150,8 @@ extract_location_from_formula(formula f, std::map<int,std::list<symbol_stc>*>*& 
 
 
 std::map<const spot::state*, std::map<int,std::list<symbol_stc>*>*>*
-    compute_all_locations_of_formula(const spot::const_twa_ptr& aut){
+    compute_all_locations_of_formula(const spot::const_twa_ptr& aut)
+{
     
     std::cout << "Computing the map of locations from the formula automaton.\n";
     
@@ -181,7 +184,8 @@ std::map<const spot::state*, std::map<int,std::list<symbol_stc>*>*>*
         
         //---------------------//
         std::cout << spot::bdd_format_formula(shared_dict, srcit->cond()) << endl;
-        std::map<int,std::list<symbol_stc>*>* map_loc = new std::map<int,std::list<symbol_stc>*>();
+        std::map<int,std::list<symbol_stc>*>* 
+                map_loc = new std::map<int,std::list<symbol_stc>*>();
         spot::formula f = spot::bdd_to_formula(srcit->cond(), shared_dict);
         
         extract_location_from_formula(f, map_loc, shared_dict);
@@ -235,16 +239,17 @@ compute_all_locations_of_graph_formula(const spot::const_twa_graph_ptr& aut) {
     while (!todo.empty()) {
         const spot::twa_graph_state* src = todo.top().first;
         spot::twa_succ_iterator* srcit = todo.top().second;
-        const spot::twa_graph_state* dst = down_cast<const spot::twa_graph_state*>(srcit->dst());
+        const spot::twa_graph_state* 
+                dst = down_cast<const spot::twa_graph_state*>(srcit->dst());
         
         //---------------------//
         std::cout << spot::bdd_format_formula(shared_dict, srcit->cond()) << endl;
-        std::map<int,std::list<symbol_stc>*>* map_loc = new std::map<int,std::list<symbol_stc>*>();
+        std::map<int,std::list<symbol_stc>*>* 
+                map_loc = new std::map<int,std::list<symbol_stc>*>();
         spot::formula f = spot::bdd_to_formula(srcit->cond(), shared_dict);
-        
         extract_location_from_formula(f, map_loc, shared_dict);
         
-        cout << "--- " << (*map_loc)[2]->size() << endl;
+        //cout << "--- " << (*map_loc)[1]->size() << endl;
         (*res)[src] = map_loc;
         //---------------------//
         
