@@ -48,6 +48,28 @@ struct symbol_stc{
     symbol_type type;
 };
 
+class tuple_edge{
+public:
+    tuple_edge(int src, int dst, string cond){
+        src_ = src;
+        dst_ = dst;
+        cond_ = cond;
+    }
+    
+    bool operator <(const tuple_edge& rhs) const
+    {
+        if (src_ < rhs.src_ || (src_ == rhs.src_ && dst_ < rhs.dst_))
+            return true;
+        else if ((src_ == rhs.src_ && dst_ == rhs.dst_) )
+            return cond_.compare(rhs.cond_);
+        return false;
+    }
+    
+    int src_;
+    int dst_;
+    string cond_;
+};
+
 float* convert_formula_to_interval(const bdd &cond);
 mvspot::mv_interval* convert_formula_to_interval(const bdd &cond, 
         mvspot::mv_interval* intervals);
@@ -55,7 +77,8 @@ mvspot::mv_interval* convert_formula_to_interval(const bdd &cond,
 std::map<const spot::state*, std::map<int,std::list<symbol_stc>*>*>*
     compute_all_locations_of_formula(const spot::const_twa_ptr&  f_twa);
 
-std::map<const spot::twa_graph_state*, std::map<int,std::list<symbol_stc>*>*>*
+//std::map<const spot::twa_graph_state*, std::map<int,std::list<symbol_stc>*>*>*
+std::map<tuple_edge, std::map<int,std::list<symbol_stc>*>*>*
     compute_all_locations_of_graph_formula(const spot::const_twa_graph_ptr&  f_twa);
 
 class marine_robot_state : public spot::state {

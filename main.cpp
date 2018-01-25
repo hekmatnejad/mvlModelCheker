@@ -255,7 +255,7 @@ void model_4(string formula) {
         cout << f <<endl;
     //k->mv_intersecting_run(af);
     //if(true) return;
-
+    
     
     if (auto run = k->intersecting_run(af))
         std::cout << "found a plan by the following run:\n" << *run;

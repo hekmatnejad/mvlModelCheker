@@ -89,9 +89,10 @@ extract_location_from_formula(formula f, std::map<int,std::list<symbol_stc>*>*&
                     if((*it).loc==loc){
                         stc = (*it);
                         found = true;
+                        break;
                     }
                     //stc = symbol_stc();
-                if(stc.type == symbol_type::NEGATIVE)
+                if(found && stc.type == symbol_type::NEGATIVE)
                     stc.type = symbol_type::BOTH;
                 else
                     stc.type = symbol_type::POSITIVE;
@@ -123,8 +124,9 @@ extract_location_from_formula(formula f, std::map<int,std::list<symbol_stc>*>*&
                     if((*it).loc==loc){
                         stc = (*it);
                         found = true;
+                        break;
                     }
-                if(stc.type == symbol_type::POSITIVE)
+                if(found && stc.type == symbol_type::POSITIVE)
                     stc.type = symbol_type::BOTH;
                 else
                     stc.type = symbol_type::NEGATIVE;
@@ -207,20 +209,23 @@ std::map<const spot::state*, std::map<int,std::list<symbol_stc>*>*>*
     return res;
 }
 
-std::map<const spot::twa_graph_state*, std::map<int, std::list<symbol_stc>*>*>*
+//std::map<const spot::twa_graph_state*, std::map<int, std::list<symbol_stc>*>*>*
+std::map<tuple_edge, std::map<int, std::list<symbol_stc>*>*>*
 compute_all_locations_of_graph_formula(const spot::const_twa_graph_ptr& aut) {
     
     std::cout << "Computing the map of locations from the formula graph automaton.\n";
     
-    std::map<const spot::twa_graph_state*, std::map<int,std::list<symbol_stc>*>*>* res;
-    res = new std::map<const spot::twa_graph_state*, std::map<int,std::list<symbol_stc>*>*>();
+    //std::map<const spot::twa_graph_state*, std::map<int,std::list<symbol_stc>*>*>* res;
+    //res = new std::map<const spot::twa_graph_state*, std::map<int,std::list<symbol_stc>*>*>();
+    std::map<tuple_edge, std::map<int,std::list<symbol_stc>*>*>* res;
+    res = new std::map<tuple_edge, std::map<int,std::list<symbol_stc>*>*>();
     /*
      * DFS traversing the automaton
      */
     spot::state_unicity_table seen;
     std::stack<std::pair<const spot::twa_graph_state*,
             spot::twa_succ_iterator*>> todo;
-
+    
     // push receives a newly-allocated state and immediately store it in
     // seen.  Therefore any state on todo is already in seen and does
     // not need to be destroyed.
@@ -248,9 +253,12 @@ compute_all_locations_of_graph_formula(const spot::const_twa_graph_ptr& aut) {
                 map_loc = new std::map<int,std::list<symbol_stc>*>();
         spot::formula f = spot::bdd_to_formula(srcit->cond(), shared_dict);
         extract_location_from_formula(f, map_loc, shared_dict);
-        
         //cout << "--- " << (*map_loc)[1]->size() << endl;
-        (*res)[src] = map_loc;
+        //(*res)[src] = map_loc;
+        
+        (*res)[tuple_edge(aut->state_number(src),aut->state_number(dst),
+                spot::bdd_format_formula(shared_dict,srcit->cond()))] = map_loc;
+        
         //---------------------//
         
         std::cout << aut->format_state(src) << "->"

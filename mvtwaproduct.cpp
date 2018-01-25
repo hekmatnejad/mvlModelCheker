@@ -50,7 +50,8 @@ namespace spot
 
   static spot::bdd_dict_ptr shared_dict;  
   static mvspot::mv_interval* shared_intervals;
-  static std::map<const spot::twa_graph_state*, std::map<int,std::list<symbol_stc>*>*>* shared_locs;
+  //static std::map<const spot::twa_graph_state*, std::map<int,std::list<symbol_stc>*>*>* shared_locs;
+  static std::map<tuple_edge, std::map<int,std::list<symbol_stc>*>*>* shared_locs;
   //std::map<int, geo_pos> geo_locations;  
   ////////////////////////////////////////////////////////////
   // state_product
@@ -268,7 +269,8 @@ namespace spot
 //          return 0;
 //      }
 
-     float find_dist_to_locs_graph(unsigned* state_num, const spot::twa_graph_state* f_state){
+     //float find_dist_to_locs_graph(unsigned* state_num, const spot::twa_graph_state* f_state){
+     float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state){
 
          std::map<int,std::list<symbol_stc>*>* s_map = (*shared_locs)[f_state];
          float min_dist[NUM_CARS];//no need for array
@@ -276,12 +278,28 @@ namespace spot
           for(int i=0; i<NUM_CARS; i++)
           {
               min_dist[i] = _MAX_DIST;
+              //min_dist[i] = -1;
               bool found = false;
               std::list<symbol_stc>* s_list = (*s_map)[i+1];
-              if(s_list!=NULL)
+              
+              if(s_list!=NULL)//not needed anymore
               for(std::list<symbol_stc>::iterator it = s_list->begin(); it != s_list->end(); ++it)
               {
-                  if((*it).type!=symbol_type::NEGATIVE){
+//                  cout << (*it).loc << " type: ";
+//                  if((*it).type == symbol_type::NEGATIVE)
+//                      cout << "NEG\n";
+//                  else if((*it).type == symbol_type::POSITIVE)
+//                      cout << "POS\n";
+//                  else
+//                      cout << "BOT\n";
+                  
+                  //cout << (*geo_locations)[state_num[i]]->x_ << " , " << (*geo_locations)[state_num[i]]->y_ << endl;
+                  //cout << (*geo_locations)[(*it).loc]->x_ << " , " << (*geo_locations)[(*it).loc]->y_ << endl;
+                  //cout << "--------\n";            
+                  
+                  //if((*it).type!=symbol_type::NEGATIVE)
+                  //if((*it).type==symbol_type::POSITIVE)
+                  {
                       float dist = std::pow((*geo_locations)[state_num[i]]->x_ - (*geo_locations)[(*it).loc]->x_ , 2);  
                       dist += std::pow((*geo_locations)[state_num[i]]->y_ - (*geo_locations)[(*it).loc]->y_, 2);  
                       if(dist < min_dist[i]){
@@ -293,6 +311,8 @@ namespace spot
               if(found)
                   res += min_dist[i];
           }
+         //if(res!=0)
+         //cout << "----------\n" << res << endl;
           return res;
       }
 
@@ -318,10 +338,22 @@ namespace spot
                 //cout << "cost: " << cost_inf_ << " , " << cost_sup_ << endl;
                 
                 const marine_robot_state* mrs = static_cast<const marine_robot_state*>(left_->dst());
-            
-                loc_dist_ = find_dist_to_locs_graph(mrs->get_state_num(),
-                        shared_formula_graph->state_from_number(shared_formula_graph->edge_storage(right_).src));
-                //std::cout << "min_dist: " << loc_dist_ << endl;                
+
+//cout << "state: " << shared_formula_graph->edge_storage(right_).src << endl;  
+
+                //----old
+//                loc_dist_ = find_dist_to_locs_graph(mrs->get_state_num(),
+//                        shared_formula_graph->state_from_number(shared_formula_graph->edge_storage(right_).src));
+
+        tuple_edge te(shared_formula_graph->edge_storage(right_).src,
+                    shared_formula_graph->edge_storage(right_).dst,
+                    spot::bdd_format_formula(shared_dict,right_->cond()));
+                
+                loc_dist_ = find_dist_to_locs_graph(mrs->get_state_num(), te);
+                
+//                cout << "model   cond: " << spot::bdd_format_formula(shared_dict,left_->cond()) << endl;
+//                cout << "formula cond: " << spot::bdd_format_formula(shared_dict,right_->cond()) << endl;
+//                std::cout << "min_dist: " << loc_dist_ << endl;                
                 
                 //cout << "**** " << shared_formula_graph->format_state(shared_formula_graph->state_from_number(shared_formula_graph->edge_storage(right_).src)) << endl;
                 //current_cond_ = current_cond;//itv_res.second;
@@ -729,6 +761,8 @@ public:
 
     void find_optimal_path_A_star() {
         
+        std::cout << "*** in: find_optimal_path_A_star\n";
+        
         //std::multimap<float,const spot::state*> 
         //        explore = std::multimap<float,const spot::state*>();
         //std::priority_queue<float, std::vector<float>, std::greater<float>> 
@@ -755,15 +789,11 @@ public:
         const spot::state* cs;//current state
         float min_c = 0;
         float optimal_cost = -1;
+        int steps = 100;
         while(!todo_q.empty())
-        //while(!explore.empty())
         {
-            //min_c = cost_q.top();
-            //cost_q.pop();
-            //cs = explore.find(min_c)->second;
-            //explore.erase(explore.find(min_c));
-            //visited.insert(cs->hash());
             
+            //if(todo_q.top().a_star_cost_)
             //cout << todo_q.top().a_star_cost_ << endl;
 
             a_star_node node(todo_q.top());
@@ -771,14 +801,21 @@ public:
             visited.insert(node.state_hash_);
             cs = reverse_state[node.state_hash_];
             min_c = node.primary_cost_;
-            visited.insert(cs->hash());
+            //visited.insert(cs->hash());
+            
+            
+            //std::cout << "\n: " << twa_prd_->format_state(cs) << endl<<endl;
+            
+            //if((steps--)<=0)
+            //    return;
+            
             
             twa_succ_iterator_product_kripke* tit = 
                     static_cast<twa_succ_iterator_product_kripke*>
                     (twa_prd_->succ_iter(cs));
-            
             if(!tit->first())
                 continue;
+            //cout << tit->loc_dist() << endl;
             
             while(!tit->done())
             {
@@ -796,15 +833,16 @@ public:
                     found_plan = true;
                     break;
                 }
-                if(visited.find(tit->dst()->hash())==visited.end()){
+                if(visited.find(tit->dst()->hash()) == visited.end())
+                {
                     reverse[tit->dst()->hash()] = cs->hash();
                     //cost_q.push(min_c+tit->cost_inf());
                     //explore.insert(std::make_pair<float,const spot::state*>
                     //        (min_c+tit->cost_inf(),tit->dst()));
-                    todo_q.push(a_star_node(tit->dst()->hash(),min_c+tit->cost_inf(),tit->loc_dist()));
+                    todo_q.push(a_star_node(tit->dst()->hash(),
+                            min_c+tit->cost_inf(),tit->loc_dist()));
                     reverse_state[tit->dst()->hash()] = tit->dst();
                     
-                }else{
                 }
                 tit->next();    
             }
