@@ -330,6 +330,7 @@ public:
     interval_bdd(spot::bdd_dict_ptr dict){// : dict_(dict){
     }
     
+    static void simplify_interval_formula_twa(spot::twa_graph_ptr& aut);
     static std::pair<mv_interval*,bdd> apply_and(bdd base, bdd model, spot::bdd_dict_ptr dict_);
     static mv_interval* symbol_formual_to_interval(string formula);
 private:

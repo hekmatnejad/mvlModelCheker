@@ -403,7 +403,7 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
               mvspot::mv_interval* itv = interval_bdd::symbol_formual_to_interval(f[0].ap_name());
               itv = itv->not_mv(itv);
               std::string sym_name = f[0].ap_name();
-              sym_name = sym_name.substr(0,sym_name.find("="));
+              sym_name = sym_name.substr(0,sym_name.find("=")+1);
               sym_name += itv->getName();
               //cout << ">>>> negated " << f[0].ap_name() << " to " << sym_name << endl;
               return spot::formula::ap(sym_name);
@@ -564,6 +564,75 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
         }
         return std::make_pair(replaced_f_p,replaced_f_n);
     }
+    
+    void interval_bdd::simplify_interval_formula_twa(spot::twa_graph_ptr &aut)
+    {
+    
+        /*
+         * DFS traversing the automaton
+         */
+        spot::state_unicity_table seen;
+        std::stack<std::pair<const spot::twa_graph_state*,
+                spot::twa_succ_iterator*>> todo;
+
+        // push receives a newly-allocated state and immediately store it in
+        // seen.  Therefore any state on todo is already in seen and does
+        // not need to be destroyed.
+        auto push = [&](const spot::twa_graph_state * s) {
+            if (seen.is_new(s)) {
+                spot::twa_succ_iterator* it = aut->succ_iter(s);
+                if (it->first())
+                    todo.emplace(s, it);
+                else // No successor for s
+                    aut->release_iter(it);
+            }
+        };
+
+        push(aut->get_init_state());
+
+        while (!todo.empty()) {
+            const spot::twa_graph_state* src = todo.top().first;
+            spot::twa_succ_iterator* srcit = todo.top().second;
+            const spot::twa_graph_state* 
+                    dst = down_cast<const spot::twa_graph_state*>(srcit->dst());
+
+            //---------------------//
+        
+        spot::formula f_base = bdd_to_formula(srcit->cond(), aut->get_dict());
+        std::vector<spot::formula> vec_f = std::vector<spot::formula>();
+        //loop around DNF formula base
+        if(f_base.kind() == op::Or){
+            for(int i=0; i<f_base.size(); i++)
+                vec_f.emplace_back(f_base[i]);
+        }
+        else
+            vec_f.emplace_back(f_base);  
+        std::vector<spot::formula> formula_conj = std::vector<spot::formula>();
+        for(std::vector<spot::formula>::iterator it = vec_f.begin(); it!= vec_f.end(); ++it)
+        {
+            map_interval_base_->clear();
+            f_base = remove_negation_from_interval_formula((*it), aut->get_dict());
+            f_base = simplify_conjuctive_formula(f_base, aut->get_dict());
+            formula_conj.push_back(f_base);
+        }        
+        spot::formula new_f = spot::formula::Or(formula_conj);
+        
+        
+            aut->edge_data(srcit).cond = spot::formula_to_bdd(new_f,aut->get_dict(),NULL);
+            //---------------------//
+
+            std::cout << aut->format_state(src) << "->"
+                    << aut->format_state(dst) << '\n';
+            // Advance the iterator, and maybe release it.
+            if (!srcit->next()) {
+                aut->release_iter(srcit);
+                todo.pop();
+            }
+            push(dst);
+        }    
+    
+    }
+
     
     std::pair<mv_interval*,bdd> interval_bdd::apply_and(bdd base, bdd model, spot::bdd_dict_ptr dict_){
         

@@ -38,6 +38,9 @@ public:
 
 //must be filled offline based on the road network geometric
 extern std::map<int, geo_pos*>* geo_locations;  
+extern int MAX_GEO_X;
+extern int MAX_GEO_Y;
+extern float MAX_GEO_DIST;
 
 enum symbol_type{
     POSITIVE=2, NEGATIVE=1, BOTH=3
@@ -61,10 +64,14 @@ public:
         if (src_ < rhs.src_ || (src_ == rhs.src_ && dst_ < rhs.dst_))
             return true;
         else if ((src_ == rhs.src_ && dst_ == rhs.dst_) )
-            return cond_.compare(rhs.cond_);
+            if (cond_.compare(rhs.cond_) < 0)
+                return true;
         return false;
     }
     
+    string to_string(){
+        return std::to_string(src_) + " -> " + std::to_string(dst_) + " : " + cond_;
+    }
     int src_;
     int dst_;
     string cond_;
@@ -74,11 +81,8 @@ float* convert_formula_to_interval(const bdd &cond);
 mvspot::mv_interval* convert_formula_to_interval(const bdd &cond, 
         mvspot::mv_interval* intervals);
 
-std::map<const spot::state*, std::map<int,std::list<symbol_stc>*>*>*
-    compute_all_locations_of_formula(const spot::const_twa_ptr&  f_twa);
-
 //std::map<const spot::twa_graph_state*, std::map<int,std::list<symbol_stc>*>*>*
-std::map<tuple_edge, std::map<int,std::list<symbol_stc>*>*>*
+const std::map<tuple_edge, std::map<int,std::list<symbol_stc>*>*>*
     compute_all_locations_of_graph_formula(const spot::const_twa_graph_ptr&  f_twa);
 
 class marine_robot_state : public spot::state {

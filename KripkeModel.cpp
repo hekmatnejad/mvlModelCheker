@@ -73,13 +73,13 @@ extract_location_from_formula(formula f, std::map<int,std::list<symbol_stc>*>*&
                 int id = std::stoi(f.ap_name().substr(1,f.ap_name().find_first_of("_")-1));
                 cout << "ID: " << id << " " << f.ap_name() << endl;
                 std::list<symbol_stc>* stc_list;
-                if( (*list)[id] != 0)
+                //if( (*list)[id] != 0)
                 {
-                    stc_list = (*list)[id];
+                    stc_list = (*list).at(id);//[id];
                 }
-                else
+                //else
                 {
-                    stc_list = new std::list<symbol_stc>();
+                //    stc_list = new std::list<symbol_stc>();
                 }
                 int loc = std::stoi(f.ap_name().substr(f.ap_name().find_last_of("_")+1,
                         f.ap_name().size() - f.ap_name().find_last_of("_")-1));
@@ -100,7 +100,7 @@ extract_location_from_formula(formula f, std::map<int,std::list<symbol_stc>*>*&
                 stc.loc = loc;
                 if(!found)
                     stc_list->push_back(stc);
-                (*list)[id] = stc_list;
+                //(*list).[id] = stc_list;
             }
             return;
         case op::Not:
@@ -108,13 +108,13 @@ extract_location_from_formula(formula f, std::map<int,std::list<symbol_stc>*>*&
                 int id = std::stoi(f[0].ap_name().substr(1,f[0].ap_name().find_first_of("_")-1));
                 cout << "ID: " << id << " " << f[0].ap_name() << endl;
                 std::list<symbol_stc>* stc_list;
-                if( (*list)[id] != 0)
+                //if( (*list)[id] != 0)
                 {
-                    stc_list = (*list)[id];
+                    stc_list = (*list).at(id);//[id];
                 }
-                else
+                //else
                 {
-                    stc_list = new std::list<symbol_stc>();
+                //    stc_list = new std::list<symbol_stc>();
                 }
                 int loc = std::stoi(f[0].ap_name().substr(f[0].ap_name().find_last_of("_")+1,
                         f[0].ap_name().size() - f[0].ap_name().find_last_of("_")-1));
@@ -134,7 +134,7 @@ extract_location_from_formula(formula f, std::map<int,std::list<symbol_stc>*>*&
                 stc.loc = loc;
                 if(!found)
                     stc_list->push_back(stc);
-                (*list)[id] = stc_list;
+                //(*list)[id] = stc_list;
             }
             return;
         case op::And:
@@ -150,67 +150,8 @@ extract_location_from_formula(formula f, std::map<int,std::list<symbol_stc>*>*&
     return ;
 }
 
-
-std::map<const spot::state*, std::map<int,std::list<symbol_stc>*>*>*
-    compute_all_locations_of_formula(const spot::const_twa_ptr& aut)
-{
-    
-    std::cout << "Computing the map of locations from the formula automaton.\n";
-    
-    std::map<const spot::state*, std::map<int,std::list<symbol_stc>*>*>* res;
-    res = new std::map<const spot::state*, std::map<int,std::list<symbol_stc>*>*>();
-    /*
-     * DFS traversing the automaton
-     */
-    spot::state_unicity_table seen;
-    std::stack<std::pair<const spot::state*,
-            spot::twa_succ_iterator*>> todo;
-
-    // push receives a newly-allocated state and immediately store it in
-    // seen.  Therefore any state on todo is already in seen and does
-    // not need to be destroyed.
-    auto push = [&](const spot::state * s) {
-        if (seen.is_new(s)) {
-            spot::twa_succ_iterator* it = aut->succ_iter(s);
-            if (it->first())
-                todo.emplace(s, it);
-            else // No successor for s
-                aut->release_iter(it);
-        }
-    };
-    push(aut->get_init_state());
-    while (!todo.empty()) {
-        const spot::state* src = todo.top().first;
-        spot::twa_succ_iterator* srcit = todo.top().second;
-        const spot::state* dst = srcit->dst();
-        
-        //---------------------//
-        std::cout << spot::bdd_format_formula(shared_dict, srcit->cond()) << endl;
-        std::map<int,std::list<symbol_stc>*>* 
-                map_loc = new std::map<int,std::list<symbol_stc>*>();
-        spot::formula f = spot::bdd_to_formula(srcit->cond(), shared_dict);
-        
-        extract_location_from_formula(f, map_loc, shared_dict);
-        
-        //cout << "--- " << (*map_loc)[1]->size() << endl;
-        (*res)[src] = map_loc;
-        //---------------------//
-        
-        std::cout << aut->format_state(src) << "->"
-                << aut->format_state(dst) << '\n';
-        // Advance the iterator, and maybe release it.
-        if (!srcit->next()) {
-            aut->release_iter(srcit);
-            todo.pop();
-        }
-        push(dst);
-    }    
-    
-    return res;
-}
-
 //std::map<const spot::twa_graph_state*, std::map<int, std::list<symbol_stc>*>*>*
-std::map<tuple_edge, std::map<int, std::list<symbol_stc>*>*>*
+const std::map<tuple_edge, std::map<int, std::list<symbol_stc>*>*>*
 compute_all_locations_of_graph_formula(const spot::const_twa_graph_ptr& aut) {
     
     std::cout << "Computing the map of locations from the formula graph automaton.\n";
@@ -248,17 +189,25 @@ compute_all_locations_of_graph_formula(const spot::const_twa_graph_ptr& aut) {
                 dst = down_cast<const spot::twa_graph_state*>(srcit->dst());
         
         //---------------------//
+        //update intervals in formula join/meet
+        
         std::cout << spot::bdd_format_formula(shared_dict, srcit->cond()) << endl;
         std::map<int,std::list<symbol_stc>*>* 
                 map_loc = new std::map<int,std::list<symbol_stc>*>();
+        for(int i=0; i<NUM_CARS; i++){
+            (*map_loc)[i+1] = new std::list<symbol_stc>();
+        }
         spot::formula f = spot::bdd_to_formula(srcit->cond(), shared_dict);
         extract_location_from_formula(f, map_loc, shared_dict);
         //cout << "--- " << (*map_loc)[1]->size() << endl;
         //(*res)[src] = map_loc;
-        
-        (*res)[tuple_edge(aut->state_number(src),aut->state_number(dst),
-                spot::bdd_format_formula(shared_dict,srcit->cond()))] = map_loc;
-        
+        tuple_edge te(aut->state_number(src),aut->state_number(dst),
+                spot::bdd_format_formula(shared_dict,srcit->cond()));
+        (*res)[te] = map_loc;
+        if(te.src_==7 && te.dst_==7)
+        cout <<">>>>>>>>" << te.to_string() << endl;
+        //cout << "from " << aut->state_number(src) << " to " << aut->state_number(dst) 
+        //        << " cond " << spot::bdd_format_formula(shared_dict,srcit->cond()) << endl;
         //---------------------//
         
         std::cout << aut->format_state(src) << "->"

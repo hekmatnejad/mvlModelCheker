@@ -30,6 +30,7 @@
 #include <spot/twaalgos/word.hh>
 #include <spot/ta/taproduct.hh>
 #include <spot/twa/taatgba.hh>
+#include <valarray>
 //#include <spot/tl/dot.hh>
 //#include <spot/taalgos/dot.hh>
 //#include "secondary.h"
@@ -47,6 +48,9 @@ static spot::kripke_graph_ptr kg_model;
 static spot::twa_graph_ptr aut_model;
 
 std::map<int, geo_pos*>* geo_locations;  
+int MAX_GEO_X;
+int MAX_GEO_Y;
+float MAX_GEO_DIST;
 
 //spot::twa_graph_ptr shared_formula_graph;
 
@@ -77,7 +81,9 @@ std:
     }
     kg_model = read_model_aut->ks;
     aut_model = read_model_aut->aut;
-
+    MAX_GEO_X = 4;
+    MAX_GEO_Y = 5;
+    MAX_GEO_DIST = std::sqrt(MAX_GEO_X*MAX_GEO_X + MAX_GEO_Y*MAX_GEO_Y);
     geo_locations = new std::map<int, geo_pos*>();
     (*geo_locations)[0] = new geo_pos(0,5);
     (*geo_locations)[1] = new geo_pos(1,5);
@@ -196,9 +202,9 @@ void model_4(string formula) {
     formula = "G(\"q=[0.5,1]\") & F(C1_loc_1) & F(C1_loc_9) & ((!C1_loc_1) U C1_loc_9) "
             " & G(!C1_loc_1 | !C1_loc_9) "
             " & G(C1_loc_9 -> GF(\"q=[1,1]\"))";
-    formula += " & F(C2_loc_4) & F(C2_loc_12) & ((!C2_loc_12) U C2_loc_4) "
-            " & G(!C2_loc_4 | !C2_loc_12)"
-            "";
+    //formula += " & F(C2_loc_4) & F(C2_loc_12) & ((!C2_loc_12) U C2_loc_4) "
+    //        " & G(!C2_loc_4 | !C2_loc_12)"
+    //        "";
 
     //formula = "G(\"q=[0.5,1]\") &  F(C2_loc_4) & F(C2_loc_12) & ((!C2_loc_12) U C2_loc_4) "
     //        " & G(!C2_loc_4 | !C2_loc_12)"
@@ -222,6 +228,10 @@ void model_4(string formula) {
     //spot::formula f = spot::formula::Not(pf.f);
     spot::formula f = pf.f;
     spot::twa_graph_ptr af = spot::translator(shared_dict).run(f);
+    
+    //update intervals on the edges
+    mvspot::interval_bdd::simplify_interval_formula_twa(af);
+    
     Util::write2File("new_formula.dot", af);
     shared_formula_graph = af;
     
