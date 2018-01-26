@@ -228,6 +228,8 @@ void model_4(string formula) {
     //spot::formula f = spot::formula::Not(pf.f);
     spot::formula f = pf.f;
     spot::twa_graph_ptr af = spot::translator(shared_dict).run(f);
+
+    Util::write2File("new_formula_org.dot", af);
     
     //update intervals on the edges
     mvspot::interval_bdd::simplify_interval_formula_twa(af);

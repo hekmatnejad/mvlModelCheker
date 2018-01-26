@@ -74,11 +74,13 @@ extract_location_from_formula(formula f, std::map<int,std::list<symbol_stc>*>*&
                 cout << "ID: " << id << " " << f.ap_name() << endl;
                 std::list<symbol_stc>* stc_list;
                 //if( (*list)[id] != 0)
+                if(id <= NUM_CARS)
                 {
                     stc_list = (*list).at(id);//[id];
                 }
-                //else
+                else
                 {
+                    return;
                 //    stc_list = new std::list<symbol_stc>();
                 }
                 int loc = std::stoi(f.ap_name().substr(f.ap_name().find_last_of("_")+1,
@@ -109,11 +111,13 @@ extract_location_from_formula(formula f, std::map<int,std::list<symbol_stc>*>*&
                 cout << "ID: " << id << " " << f[0].ap_name() << endl;
                 std::list<symbol_stc>* stc_list;
                 //if( (*list)[id] != 0)
+                if(id <= NUM_CARS)
                 {
                     stc_list = (*list).at(id);//[id];
                 }
-                //else
+                else
                 {
+                    return;
                 //    stc_list = new std::list<symbol_stc>();
                 }
                 int loc = std::stoi(f[0].ap_name().substr(f[0].ap_name().find_last_of("_")+1,

@@ -270,79 +270,78 @@ namespace spot
 //          return 0;
 //      }
 
-     //float find_dist_to_locs_graph(unsigned* state_num, const spot::twa_graph_state* f_state){
-     float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state){
-         std::map<int,std::list<symbol_stc>*>* s_map = (*shared_locs).at(f_state);
-         float min_dist;
-         float res = 0;
-          for(int i=0; i<NUM_CARS; i++)
-          {
-              min_dist = _MAX_DIST;
-              bool found = false;
-              std::list<symbol_stc>* s_list = (*s_map)[i+1];
-              //if(s_list!=NULL)//not needed anymore
-              if(!s_list->empty())
-              for(std::list<symbol_stc>::iterator it = s_list->begin(); it != s_list->end(); ++it)
-              {
-//                  cout << (*it).loc << " type: ";
-//                  if((*it).type == symbol_type::NEGATIVE)
-//                      cout << "NEG\n";
-//                  else if((*it).type == symbol_type::POSITIVE)
-//                      cout << "POS\n";
-//                  else
-//                      cout << "BOT\n";
-                  
-                  //cout << (*geo_locations)[state_num[i]]->x_ << " , " << (*geo_locations)[state_num[i]]->y_ << endl;
-                  //cout << (*geo_locations)[(*it).loc]->x_ << " , " << (*geo_locations)[(*it).loc]->y_ << endl;
-                  //cout << "--------\n";            
-                  
-                  //if((*it).type!=symbol_type::NEGATIVE)
-                  if((*it).type==symbol_type::POSITIVE)
-                  {
-                      float dist = std::pow((*geo_locations)[state_num[i]]->x_ - (*geo_locations)[(*it).loc]->x_ , 2);  
-                      dist += std::pow((*geo_locations)[state_num[i]]->y_ - (*geo_locations)[(*it).loc]->y_, 2);  
-                      dist = std::sqrt(dist);
-                      dist = dist/MAX_GEO_DIST; 
-                      if(dist < min_dist){
-                          min_dist = dist;
-                          found = true;
-                      }
-                  }
-                  /*
-                  else if((*it).type==symbol_type::NEGATIVE)
-                  {
-                      float dist = std::pow((*geo_locations)[state_num[i]]->x_ - (*geo_locations)[(*it).loc]->x_ , 2);  
-                      dist += std::pow((*geo_locations)[state_num[i]]->y_ - (*geo_locations)[(*it).loc]->y_, 2);  
-                      dist = std::sqrt(dist);
-                      dist = 1 - dist/MAX_GEO_DIST; 
-                      if(dist < min_dist[i]){
-                          min_dist[i] = dist;
-                          found = true;
-                      }
-                  }
-                  else if((*it).type==symbol_type::BOTH)
-                  {
-                      float dist = std::pow((*geo_locations)[state_num[i]]->x_ - (*geo_locations)[(*it).loc]->x_ , 2);  
-                      dist += std::pow((*geo_locations)[state_num[i]]->y_ - (*geo_locations)[(*it).loc]->y_, 2);  
-                      dist = std::sqrt(dist);
-                      dist = dist/MAX_GEO_DIST; 
-                      dist = dist < (1-dist) ? dist : 1-dist;
-                      if(dist < min_dist[i]){
-                          min_dist[i] = dist;
-                          found = true;
-                      }
-                  }*/
-              }
-              if(found)
-                  res += min_dist;
-          }
-          
-         if(res == 0)
-             res = NUM_CARS*1;
-         //if(res!=0)
-         //cout << "----------\n" << res << endl;
-         return res;
-      }
+//float find_dist_to_locs_graph(unsigned* state_num, const spot::twa_graph_state* f_state){
+
+float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state) 
+{
+
+    std::map<int, std::list<symbol_stc>*>* s_map = (*shared_locs).at(f_state);
+    float min_dist;
+    float res = 0;
+    bool found = false;
+    for (int i = 0; i < NUM_CARS; i++) {
+        min_dist = _MAX_DIST;
+        found = false;
+        std::list<symbol_stc>* s_list = (*s_map)[i + 1];
+        //if(s_list!=NULL)//not needed anymore
+        //if (!s_list->empty())
+            for (std::list<symbol_stc>::iterator it = s_list->begin(); it != s_list->end(); ++it) {
+                //                  cout << (*it).loc << " type: ";
+                //                  if((*it).type == symbol_type::NEGATIVE)
+                //                      cout << "NEG\n";
+                //                  else if((*it).type == symbol_type::POSITIVE)
+                //                      cout << "POS\n";
+                //                  else
+                //                      cout << "BOT\n";
+
+                //cout << (*geo_locations)[state_num[i]]->x_ << " , " << (*geo_locations)[state_num[i]]->y_ << endl;
+                //cout << (*geo_locations)[(*it).loc]->x_ << " , " << (*geo_locations)[(*it).loc]->y_ << endl;
+                //cout << "--------\n";            
+
+                //if((*it).type!=symbol_type::NEGATIVE)
+                if ((*it).type == symbol_type::POSITIVE) {
+                    float dist = std::pow((*geo_locations)[state_num[i]]->x_ - (*geo_locations)[(*it).loc]->x_, 2);
+                    dist += std::pow((*geo_locations)[state_num[i]]->y_ - (*geo_locations)[(*it).loc]->y_, 2);
+                    dist = std::sqrt(dist);
+                    dist = dist / MAX_GEO_DIST;
+                    if (dist < min_dist) {
+                        min_dist = dist;
+                        found = true;
+                    }
+                }
+                /*
+                else if((*it).type==symbol_type::NEGATIVE)
+                {
+                    float dist = std::pow((*geo_locations)[state_num[i]]->x_ - (*geo_locations)[(*it).loc]->x_ , 2);  
+                    dist += std::pow((*geo_locations)[state_num[i]]->y_ - (*geo_locations)[(*it).loc]->y_, 2);  
+                    dist = std::sqrt(dist);
+                    dist = 1 - dist/MAX_GEO_DIST; 
+                    if(dist < min_dist){
+                        min_dist = dist;
+                        found = true;
+                    }
+                }
+                else if((*it).type==symbol_type::BOTH)
+                {
+                    float dist = std::pow((*geo_locations)[state_num[i]]->x_ - (*geo_locations)[(*it).loc]->x_ , 2);  
+                    dist += std::pow((*geo_locations)[state_num[i]]->y_ - (*geo_locations)[(*it).loc]->y_, 2);  
+                    dist = std::sqrt(dist);
+                    dist = dist/MAX_GEO_DIST; 
+                    dist = dist < (1-dist) ? dist : 1-dist;
+                    if(dist < min_dist){
+                        min_dist = dist;
+                        found = true;
+                    }
+                }*/
+            }
+        if (found)
+            res += min_dist;
+    }
+
+    if (res == 0)
+        res = NUM_CARS * 1;
+    return res;
+}
 
       
       bool next_non_false_() override
@@ -355,36 +354,26 @@ namespace spot
         do
           {
             bdd r = right_->cond();
-            itv_res = mvspot::interval_bdd::apply_and(r, l, shared_dict);   
-            //std::cout << "****RESULT " << itv_res.first->get_as_str() << "isFalse:" << itv_res.first->isFalse()<< endl;
             bdd current_cond = l & r;
-            if(!itv_res.first->isFalse() && current_cond != bddfalse)
+            if(current_cond != bddfalse){
+            itv_res = mvspot::interval_bdd::apply_and(r, l, shared_dict);   
+            if(!itv_res.first->isFalse())
             //if(current_cond != bddfalse)
             {
                 cost_inf_ = NUM_CARS + 1 - itv_res.first->getButtom()->getValue();
                 cost_sup_ = NUM_CARS + 1 - itv_res.first->getTop()->getValue();
                 //cout << "cost: " << cost_inf_ << " , " << cost_sup_ << endl;
                 
-                const marine_robot_state* mrs = static_cast<const marine_robot_state*>(left_->dst());
+                const marine_robot_state* mrs = 
+                            static_cast<const marine_robot_state*>(left_->dst());
 
-//cout << "state: " << shared_formula_graph->edge_storage(right_).src << endl;  
-
-                //----old
-//                loc_dist_ = find_dist_to_locs_graph(mrs->get_state_num(),
-//                        shared_formula_graph->state_from_number(shared_formula_graph->edge_storage(right_).src));
-
-        tuple_edge te(shared_formula_graph->edge_storage(right_).src,
-                    shared_formula_graph->edge_storage(right_).dst,
-                    spot::bdd_format_formula(shared_dict,right_->cond()));
-        //cout << te.to_string() << endl;
-        //if(te.src_==7 && te.dst_==7){
-        //    cout << "fffff\n";
-        //    cout << (*shared_locs).at(te)->size() << "*****\n";
-        //}
+                tuple_edge te(shared_formula_graph->edge_storage(right_).src,
+                        shared_formula_graph->edge_storage(right_).dst,
+                        spot::bdd_format_formula(shared_dict,right_->cond()));
                 loc_dist_ = find_dist_to_locs_graph(mrs->get_state_num(), te);
-//-------------
-loc_dist_ = loc_dist_ + 1 - itv_res.first->getButtom()->getValue();
-//-------------
+                //-------------
+                loc_dist_ = loc_dist_ + 1 - itv_res.first->getButtom()->getValue();
+                //-------------
 
                 
 //                cout << "model   cond: " << spot::bdd_format_formula(shared_dict,left_->cond()) << endl;
@@ -395,6 +384,7 @@ loc_dist_ = loc_dist_ + 1 - itv_res.first->getButtom()->getValue();
                 //current_cond_ = current_cond;//itv_res.second;
                 current_cond_ = bddtrue;//****************test: for printout purposes
                 return true;
+            }
             }
           }
         while (right_->next());
@@ -820,7 +810,7 @@ public:
         int steps = 100;
         while(!todo_q.empty())
         {
-            
+            //auto start = chrono::steady_clock::now();
             //if(todo_q.top().a_star_cost_)
             //cout << todo_q.top().a_star_cost_ << endl;
 
@@ -858,7 +848,7 @@ public:
                 {
                     cout << "cond: " << tit->acc() << endl;
                     target = tit->dst()->hash();
-                    if(target!=cs->hash()){
+                    if(target != cs->hash()){
                         reverse[target] = cs->hash();
                         reverse_state[target] = tit->dst();
                     }
@@ -873,11 +863,13 @@ public:
 
                     //NO HURISTIC
                     //todo_q.push(a_star_node(tit->dst()->hash(),
-                    //        min_c+tit->cost_inf(),tit->loc_dist()));
+                    //        min_c+tit->cost_inf(),min_c+tit->loc_dist()));
                     
                     /*******HURISTIC********/
+                    ////todo_q.push(a_star_node(tit->dst()->hash(),
+                    ////        min_c+tit->loc_dist(),tit->loc_dist()));
                     todo_q.push(a_star_node(tit->dst()->hash(),
-                            min_c+tit->loc_dist(),tit->loc_dist()));
+                            min_c+tit->loc_dist(),min_c+tit->loc_dist()));
                     /***************/
                     
                     
@@ -888,6 +880,9 @@ public:
             }
             if(found_plan)
                 break;
+            //auto end = chrono::steady_clock::now();
+            //cout << "time ms: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << endl;
+            
         }
         if(found_plan){
             std::cout << "\nFOUND AN OPTIMAL PLAN ****\n" << "reverse size: " << reverse.size() 
@@ -953,14 +948,17 @@ private:
       other = remove_fin_maybe(other);
     else
       a = remove_fin_maybe(a);
-    //-------
+    //-----------------------------------
     if(true){
-    minimal_cost minc(mv::spot::otf_product(a, other));
-    //minc.find_optimal_path();
-    minc.find_optimal_path_A_star();
-    exit(0);
+        auto start = chrono::steady_clock::now();
+        minimal_cost minc(mv::spot::otf_product(a, other));
+        //minc.find_optimal_path();
+        minc.find_optimal_path_A_star();
+        auto end = chrono::steady_clock::now();
+        cout << "Execution time in milliseconds: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << endl;
+        exit(0);
     }
-    //-------
+    //-----------------------------------
     auto run = mv::spot::otf_product(a, other)->accepting_run();
     //auto run = spot::otf_product(a, other)->accepting_run();
     if (!run)

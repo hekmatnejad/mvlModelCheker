@@ -658,9 +658,14 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
         bdd m_bdd_n = bddfalse;
         int cnt = 0;
         for(std::vector<spot::formula>::iterator it = vec_f.begin(); it!= vec_f.end(); ++it){
+            f_base = (*it);
             //cout << "1>>>>> " << (*it) << endl;
-            f_base = remove_negation_from_interval_formula((*it), dict_);
-            f_base = simplify_conjuctive_formula(f_base, dict_);
+            
+            //note: this preprocessing is no longer needed because
+            //I have simplified the formula automaton in advance
+            //f_base = remove_negation_from_interval_formula((*it), dict_);
+            //f_base = simplify_conjuctive_formula(f_base, dict_);
+            
             //cout << "2>>>>> " << f_base << endl;
             std::pair<spot::formula,spot::formula> res_f = 
                     prepare_apply_and(f_base, f_model, true, dict_);

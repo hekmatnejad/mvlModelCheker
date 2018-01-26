@@ -45,6 +45,7 @@
 #include <bddx.h>
 #include <queue>
 #include <spot/twa/formula2bdd.hh>
+#include <chrono>
 
 using namespace std;
 //using namespace spot;
