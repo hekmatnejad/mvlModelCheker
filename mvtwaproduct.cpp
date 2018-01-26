@@ -637,19 +637,6 @@ public:
     {reverse=revparam;}
   bool operator() (const a_star_node& lhs, const a_star_node& rhs) const
   {
-//    if (reverse) 
-//    {
-//        if(lhs.primary_cost_ > rhs.primary_cost_)
-//            return true;
-//        else
-//            return false;
-//    }
-//    else{ 
-//        if(lhs.primary_cost_ < rhs.primary_cost_)
-//            return true;
-//        else 
-//            return false;
-//    }
       
     if (reverse) 
     {
@@ -883,10 +870,17 @@ public:
                 if(visited.find(tit->dst()->hash()) == visited.end())
                 {
                     reverse[tit->dst()->hash()] = cs->hash();
-//                    todo_q.push(a_star_node(tit->dst()->hash(),
-//                            min_c+tit->cost_inf(),tit->loc_dist()));
+
+                    //NO HURISTIC
+                    //todo_q.push(a_star_node(tit->dst()->hash(),
+                    //        min_c+tit->cost_inf(),tit->loc_dist()));
+                    
+                    /*******HURISTIC********/
                     todo_q.push(a_star_node(tit->dst()->hash(),
                             min_c+tit->loc_dist(),tit->loc_dist()));
+                    /***************/
+                    
+                    
                     reverse_state[tit->dst()->hash()] = tit->dst();
                     state_cost_map[tit->dst()->hash()] = tit->cost_inf();
                 }

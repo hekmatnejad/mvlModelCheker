@@ -204,8 +204,8 @@ compute_all_locations_of_graph_formula(const spot::const_twa_graph_ptr& aut) {
         tuple_edge te(aut->state_number(src),aut->state_number(dst),
                 spot::bdd_format_formula(shared_dict,srcit->cond()));
         (*res)[te] = map_loc;
-        if(te.src_==7 && te.dst_==7)
-        cout <<">>>>>>>>" << te.to_string() << endl;
+        //if(te.src_==7 && te.dst_==7)
+        //cout <<">>>>>>>>" << te.to_string() << endl;
         //cout << "from " << aut->state_number(src) << " to " << aut->state_number(dst) 
         //        << " cond " << spot::bdd_format_formula(shared_dict,srcit->cond()) << endl;
         //---------------------//

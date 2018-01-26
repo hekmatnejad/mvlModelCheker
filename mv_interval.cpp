@@ -403,7 +403,7 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
               mvspot::mv_interval* itv = interval_bdd::symbol_formual_to_interval(f[0].ap_name());
               itv = itv->not_mv(itv);
               std::string sym_name = f[0].ap_name();
-              sym_name = sym_name.substr(0,sym_name.find("=")+1);
+              sym_name = sym_name.substr(0,sym_name.find("=")+1);//found it :)
               sym_name += itv->getName();
               //cout << ">>>> negated " << f[0].ap_name() << " to " << sym_name << endl;
               return spot::formula::ap(sym_name);
