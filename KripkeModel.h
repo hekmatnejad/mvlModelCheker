@@ -168,6 +168,7 @@ public:
 
 };
 
+extern marine_robot_kripke* shared_model_kripke;
 
 #endif /* KRIPKEMODEL_H */
 

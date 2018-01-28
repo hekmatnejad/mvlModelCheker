@@ -523,15 +523,21 @@ mvspot::mv_interval* mvspot::interval_bdd::shared_intervals_ = spot::twa::shared
                     res &= !col_avo_;//return bddfalse;
                     //cout << "collision: \n" << ss->get_state_num()[0] << " " << ss->get_state_num()[1]<<endl
                     //        << ss->get_from_state_num()[0] << " " << ss->get_from_state_num()[1]<<endl;
+                    
+                    /*
+                     ignore this state
+                     */
+                    return bddfalse;
                     break;
                 }
             }
             if(res!=bddtrue)
                 break;
         }
-        }else{
-            res &= col_avo_;
         }
+        //else{
+        //    res &= col_avo_;
+        //}
         //spot::formula ff = spot::parse_formula("\"q="+ss->get_q_interval()->getName()+"\"");
         spot::formula ff = spot::formula::ap("q="+ss->get_q_interval()->getName()+"");
         //if(ss->get_q_interval()->getName().compare("[1,1]")!=0)

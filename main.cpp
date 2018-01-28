@@ -84,6 +84,7 @@ std:
     MAX_GEO_X = 4;
     MAX_GEO_Y = 5;
     MAX_GEO_DIST = std::sqrt(MAX_GEO_X*MAX_GEO_X + MAX_GEO_Y*MAX_GEO_Y);
+    std::cout << "MAX_GEO_DIST: " << MAX_GEO_DIST  << endl;
     geo_locations = new std::map<int, geo_pos*>();
     (*geo_locations)[0] = new geo_pos(0,5);
     (*geo_locations)[1] = new geo_pos(1,5);
@@ -201,7 +202,8 @@ void model_4(string formula) {
 
     formula = "G(\"q=[0.5,1]\") & F(C1_loc_1) & F(C1_loc_9) & ((!C1_loc_1) U C1_loc_9) "
             " & G(!C1_loc_1 | !C1_loc_9) "
-            " & G(C1_loc_9 -> GF(\"q=[1,1]\"))";
+            " & G(C1_loc_9 -> XG(\"q=[1,1]\"))";
+            ////" & G(C1_loc_9 -> GF(\"q=[1,1]\"))";
     formula += " & F(C2_loc_4) & F(C2_loc_12) & ((!C2_loc_12) U C2_loc_4) "
             " & G(!C2_loc_4 | !C2_loc_12)"
             "";
@@ -254,6 +256,14 @@ void model_4(string formula) {
     // Find a run of or marine_robot_kripke that intersects af.
     auto k = std::make_shared<marine_robot_kripke>(shared_dict, str_certainty_ap, aut_model,
             init_state, lst_loc, shared_intervals);
+    
+    //shared_model_kripke = static_cast<marine_robot_kripke*>(k);
+    // Convert demo_kripke into an explicit graph
+  spot::twa_graph_ptr kg =
+    spot::make_twa_graph(k,
+                         spot::twa::prop_set::all());
+      Util::write2File("merged_model.dot", kg);
+
     
     cout << "accepting condition <model>: " << k->acc() << " and formulas:\n";
     for(spot::formula f:  k->ap())
