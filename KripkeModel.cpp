@@ -316,6 +316,10 @@ mvspot::mv_interval* mvspot::interval_bdd::shared_intervals_ = spot::twa::shared
             return h > oh;
     }
 
+    marine_robot_state::~marine_robot_state() {
+        delete [] state_num_;
+        delete [] from_state_num_;
+    }
 //----------------------------------------------//
 //  class marine_robot_succ_iterator    
 //----------------------------------------------//
@@ -332,9 +336,14 @@ mvspot::mv_interval* mvspot::interval_bdd::shared_intervals_ = spot::twa::shared
             state_num_[i] = state_num[i];
             aut_succ_[i] = org_model->succ_iter(org_model->state_from_number(state_num[i]));
         }
-        //delete[] state_num;
+        delete[] state_num;
     }
 
+    marine_robot_succ_iterator::~marine_robot_succ_iterator() {
+        delete [] state_num_;
+        delete [] aut_succ_;
+        //cout << "-";
+    }
 
     bool marine_robot_succ_iterator::first() {
 
@@ -373,7 +382,9 @@ mvspot::mv_interval* mvspot::interval_bdd::shared_intervals_ = spot::twa::shared
         from_state_num = new unsigned[NUM_CARS];
         mvspot::mv_interval* itv = nullptr;
         for (int i = 0; i < NUM_CARS; i++) {
-            state_num[i] = org_model_->state_number(aut_succ_[i]->dst());
+            const spot::state* dst = aut_succ_[i]->dst();
+            state_num[i] = org_model_->state_number(dst);
+            dst->destroy();
             from_state_num[i] = state_num_[i];
             if (aut_succ_[i]->cond() != bddfalse) {
                 spot::internal::twa_succ_iterable k = 

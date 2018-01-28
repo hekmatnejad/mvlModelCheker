@@ -42,7 +42,7 @@ using namespace std;
 #define _MAX_COST  5555
 #define _MAX_DIST  MAX_GEO_DIST
 spot::twa_graph_ptr shared_formula_graph;
-marine_robot_kripke* shared_model_kripke;
+const spot::kripke* shared_model_kripke;
 
 
 //namespace mv{
@@ -267,6 +267,8 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state)
     bool found = false;
     for (int i = 0; i < NUM_CARS; i++) {
         min_dist[i] = 1;
+        float dist_neg = 1;
+        float dist_pos = 1;
         found = false;
         std::list<symbol_stc>* s_list = (*s_map)[i + 1];
         //if(s_list->size()>1)
@@ -285,27 +287,60 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state)
                 //cout << (*geo_locations)[state_num[i]]->x_ << " , " << (*geo_locations)[state_num[i]]->y_ << endl;
                 //cout << (*geo_locations)[(*it).loc]->x_ << " , " << (*geo_locations)[(*it).loc]->y_ << endl;
                 //cout << "--------\n";            
-
-                //this must be updated: only one location symbol per state
-                if ((*it).type == symbol_type::POSITIVE) {
+/*
+                //if(cycle_node)
+                {
+                if( (*it).type == symbol_type::NEGATIVE)
+                {
+                    float dist = std::pow((*geo_locations)[state_num[i]]->x_ - (*geo_locations)[(*it).loc]->x_ , 2);  
+                    dist += std::pow((*geo_locations)[state_num[i]]->y_ - (*geo_locations)[(*it).loc]->y_, 2);  
+                    dist = std::sqrt(dist);
+                    dist = dist / MAX_GEO_DIST; 
+                    if (dist < dist_neg)
+                    {
+                        dist_neg = dist;
+                        found = true;
+                    }
+                }
+                    
+                }
+                //else
+                {
+                if ( (*it).type == symbol_type::POSITIVE) {
                     float dist = std::pow((*geo_locations)[state_num[i]]->x_ - (*geo_locations)[(*it).loc]->x_, 2);
                     dist += std::pow((*geo_locations)[state_num[i]]->y_ - (*geo_locations)[(*it).loc]->y_, 2);
                     dist = std::sqrt(dist);
                     dist = dist / MAX_GEO_DIST;
-                    if (dist < min_dist[i]) 
+                    //if (dist < min_dist[i]) 
+                    {
+                        dist_pos = dist;
+                        found = true;
+                    }
+                }
+                    
+                }
+ */
+                
+                //this must be updated: only one location symbol per state
+                if ( (*it).type == symbol_type::POSITIVE) {
+                    float dist = std::pow((*geo_locations)[state_num[i]]->x_ - (*geo_locations)[(*it).loc]->x_, 2);
+                    dist += std::pow((*geo_locations)[state_num[i]]->y_ - (*geo_locations)[(*it).loc]->y_, 2);
+                    dist = std::sqrt(dist);
+                    dist = dist / MAX_GEO_DIST;
+                    //if (dist < min_dist[i]) 
                     {
                         min_dist[i] = dist;
                         found = true;
                     }
                 }
                 
-                else if((*it).type==symbol_type::NEGATIVE)
+                else if( (*it).type == symbol_type::NEGATIVE)
                 {
                     float dist = std::pow((*geo_locations)[state_num[i]]->x_ - (*geo_locations)[(*it).loc]->x_ , 2);  
                     dist += std::pow((*geo_locations)[state_num[i]]->y_ - (*geo_locations)[(*it).loc]->y_, 2);  
                     dist = std::sqrt(dist);
-                    dist = dist/MAX_GEO_DIST; 
-                    if(dist < min_dist[i])
+                    dist = dist / MAX_GEO_DIST; 
+                    //if (dist < min_dist[i])
                     {
                         min_dist[i] = dist;
                         found = true;
@@ -319,13 +354,18 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state)
                     dist = std::sqrt(dist);
                     dist = dist / MAX_GEO_DIST; 
                     dist = dist < (1-dist) ? dist : 1-dist;
-                    if(dist < min_dist[i]){
+                    //if(dist < min_dist[i])
+                    {
                         min_dist[i] = dist;
                         found = true;
                     }
                 }
                 */
             }
+//        if(dist_pos < 1)
+//            min_dist[i] = dist_pos;
+//        else if(dist_neg < 1)
+//            min_dist[i] = dist_neg;
         //if (found)
             res += min_dist[i];
     }
@@ -357,19 +397,22 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state)
             if(!itv_res.first->isFalse())
             //if(current_cond != bddfalse)
             {
-                cost_inf_ = NUM_CARS + 1 - itv_res.first->getButtom()->getValue();
-                cost_sup_ = NUM_CARS + 1 - itv_res.first->getTop()->getValue();
-                //cout << "cost: " << cost_inf_ << " , " << cost_sup_ << endl;
                 
                 const marine_robot_state* mrs = 
                             static_cast<const marine_robot_state*>(left_->dst());
 
-                //tuple_edge te(shared_formula_graph->edge_storage(right_).src,
-                //        shared_formula_graph->edge_storage(right_).dst,
-                //        spot::bdd_format_formula(shared_dict,right_->cond()));
-                //loc_dist_ = find_dist_to_locs_graph(mrs->get_state_num(), te);
+                tuple_edge te(shared_formula_graph->edge_storage(right_).src,
+                        shared_formula_graph->edge_storage(right_).dst,
+                        spot::bdd_format_formula(shared_dict,right_->cond()));
+                loc_dist_ = find_dist_to_locs_graph(mrs->get_state_num(), te);
                 //loc_dist_ = loc_dist_ + 1 - itv_res.first->getButtom()->getValue();
 
+                inf_ = NUM_CARS + 1 - itv_res.first->getButtom()->getValue();
+                sup_ = NUM_CARS + 1 - itv_res.first->getTop()->getValue();
+                
+                cost_inf_ = loc_dist_ + 1 - itv_res.first->getButtom()->getValue();
+                cost_sup_ = loc_dist_ + 1 - itv_res.first->getTop()->getValue();
+                //cout << "cost: " << cost_inf_ << " , " << cost_sup_ << endl;
                 
 //                cout << "model   cond: " << spot::bdd_format_formula(shared_dict,left_->cond()) << endl;
 //                cout << "formula cond: " << spot::bdd_format_formula(shared_dict,right_->cond()) << endl;
@@ -377,6 +420,8 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state)
                 
                 //cout << "**** " << shared_formula_graph->format_state(shared_formula_graph->state_from_number(shared_formula_graph->edge_storage(right_).src)) << endl;
                 //current_cond_ = current_cond;//itv_res.second;
+                
+                mrs->destroy();
                 current_cond_ = bddtrue;//****************test: for printout purposes
                 return true;
             }
@@ -414,6 +459,16 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state)
       {
           return cost_sup_;
       }
+
+      float inf() 
+      {
+          return inf_;
+      }
+
+      float sup() 
+      {
+          return sup_;
+      }
       
       float loc_dist() 
       {
@@ -430,6 +485,8 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state)
       float cost_inf_ = _MAX_COST;//primary cost 
       float cost_sup_ = _MAX_COST;//secondary cost
       float loc_dist_ = _MAX_DIST;//A star helper
+      float inf_;
+      float sup_;
     };
 
   } // anonymous
@@ -480,6 +537,7 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state)
     
     //***************//
     shared_dict = get_dict();
+    shared_model_kripke = dynamic_cast<const kripke*>(left_.get());
     //shared_locs = compute_all_locations_of_formula(right_);
     shared_locs = compute_all_locations_of_graph_formula(shared_formula_graph);
     //tuple_edge tst(7,7,"(!C1_loc_1 & col_avo & \"q=[1,1]\") | (!C1_loc_9 & col_avo & \"q=[1,1]\")");
@@ -666,8 +724,10 @@ public:
         
         std::cout << "*** in: find_optimal_path_A_star\n";
         
-        std::priority_queue<a_star_node, std::vector<a_star_node>, a_star_costcomparison>
-                todo_q = std::priority_queue<a_star_node, std::vector<a_star_node>, a_star_costcomparison>();
+        std::priority_queue<a_star_node, std::vector<a_star_node>, a_star_costcomparison>*
+                todo_q = new std::priority_queue<a_star_node, std::vector<a_star_node>, a_star_costcomparison>();
+        std::priority_queue<a_star_node, std::vector<a_star_node>, a_star_costcomparison>*
+                todo_q_cpy;// = new std::priority_queue<a_star_node, std::vector<a_star_node>, a_star_costcomparison>();
         std::set<size_t> visited = std::set<size_t>();
         std::map<size_t,size_t> reverse = std::map<size_t,size_t>();
         std::map<size_t,float> state_cost_map = std::map<size_t,float>();
@@ -679,7 +739,7 @@ public:
         std::pair<const spot::state*,float> item = 
                 std::make_pair(twa_prd_->get_init_state(),0);
         std::cout << "init state: " << twa_prd_->format_state(twa_prd_->get_init_state()) << endl;
-        todo_q.push(a_star_node(twa_prd_->get_init_state()->hash(),0,0));
+        todo_q->push(a_star_node(twa_prd_->get_init_state()->hash(),0,0));
         start = item.first->hash();
         state_cost_map[start] = 0;
         total_cost_map[start] = 0;
@@ -691,12 +751,12 @@ public:
         float min_c = 0;
         float optimal_cost = -1;
         int steps = 100;
-        while(!todo_q.empty())
+        while(!todo_q->empty())
         {
             //auto start = chrono::steady_clock::now();
 
-            a_star_node node(todo_q.top());
-            todo_q.pop();
+            a_star_node node(todo_q->top());
+            todo_q->pop();
             visited.insert(node.state_hash_);
             cs = reverse_state[node.state_hash_];//do not need the state, hash is fine
             //min_c = node.primary_cost_;
@@ -711,6 +771,7 @@ public:
                 continue;
             while(!tit->done())
             {
+                const spot::state_product* tit_dst = tit->dst();
                 twa_succ_iterator_product_kripke* tmp = 
                     down_cast<twa_succ_iterator_product_kripke*>
                     (twa_prd_->succ_iter(tit->dst()));
@@ -722,47 +783,54 @@ public:
                     tit->next();
                     continue;
                 }
-                if(twa_prd_->right_acc().accepting(tmp->acc()))
-                {
-                    cout << "cond: " << tmp->acc() << endl;
-                    target = tmp->dst()->hash();
-                    if(target != cs->hash()){
-                        reverse[target] = cs->hash();
-                        reverse_state[target] = tmp->dst();
-                    }
-                    optimal_cost = min_c;
-                    found_plan = true;
-                    break;
-                }
-//                if(twa_prd_->right_acc().accepting(tit->acc()) && 
-//                        tit->cond() != bddfalse)
+//                if(twa_prd_->right_acc().accepting(tmp->acc()))
 //                {
-//                    cout << "cond: " << tit->acc() << endl;
-//                    target = tit->dst()->hash();
+//                    cout << "cond: " << tmp->acc() << endl;
+//                    target = tmp->dst()->hash();
 //                    if(target != cs->hash()){
 //                        reverse[target] = cs->hash();
-//                        reverse_state[target] = tit->dst();
+//                        reverse_state[target] = tmp->dst();
 //                    }
 //                    optimal_cost = min_c;
 //                    found_plan = true;
 //                    break;
 //                }
-                if(visited.find(tit->dst()->hash()) == visited.end()
-                        ||  (visited.find(tit->dst()->hash()) != visited.end() 
+                if(twa_prd_->right_acc().accepting(tit->acc()) && 
+                        tit->cond() != bddfalse)
+                {
+                    cout << "cond: " << tit->acc() << endl;
+                    target = tit->dst()->hash();
+                    if(target != cs->hash()){
+                        reverse[target] = cs->hash();
+                        reverse_state[target] = tit->dst();
+                    }
+                    optimal_cost = min_c;
+                    found_plan = true;
+                    break;
+                }
+                if(visited.find(tit_dst->hash()) == visited.end()
+                        ||  (visited.find(tit_dst->hash()) != visited.end() 
                             &&
-                            total_cost_map[tit->dst()->hash()] > (min_c+tit->cost_inf())
+                            //total_cost_map[tit_dst->hash()] > (min_c+(tit->cost_inf()+tit->cost_sup())/2)
+                            total_cost_map[tit_dst->hash()] > (min_c+tit->cost_inf())
                             )
                   )
                 {
 
                     //NO HURISTIC
-                    todo_q.push(a_star_node(tit->dst()->hash(),
+                    todo_q->push(a_star_node(tit_dst->hash(),
                             min_c+tit->cost_inf(), min_c+tit->cost_sup()));
+                            //min_c+(tit->cost_inf()+tit->cost_sup())/2, min_c+(tit->cost_inf()+tit->cost_sup())/2));
                             //min_c+tit->loc_dist(), tit->loc_dist()));
-                    total_cost_map[tit->dst()->hash()] = min_c+tit->cost_inf();
-                    reverse[tit->dst()->hash()] = cs->hash();
-                    reverse_state[tit->dst()->hash()] = tit->dst();
-                    state_cost_map[tit->dst()->hash()] = tit->cost_inf();
+                    total_cost_map[tit_dst->hash()] = min_c+tit->cost_inf();
+                    //total_cost_map[tit_dst->hash()] = min_c+(tit->cost_inf()+tit->cost_sup())/2;
+                    reverse[tit_dst->hash()] = cs->hash();
+                    if(reverse_state.find(tit_dst->hash())==reverse_state.end())
+                        reverse_state[tit_dst->hash()] = tit_dst;
+                    else
+                        tit_dst->destroy();
+                    state_cost_map[tit_dst->hash()] = (tit->inf());
+                    //state_cost_map[tit->dst()->hash()] = (tit->inf() + tit->sup())/2;
 
                 }
 //                else
@@ -781,17 +849,44 @@ public:
 //                    }
 //                    
 //                }
-                tit->next();    
+                tit->next();   
+                twa_prd_->release_iter(tmp);
+                //tmp->~twa_succ_iterator_product_kripke();
             }
+            twa_prd_->release_iter(tit);
+            //tit->~twa_succ_iterator_product_kripke();
+            
             if(found_plan)
                 break;
             //auto end = chrono::steady_clock::now();
             //cout << "time ms: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << endl;
-            
+            if(todo_q->size() > MAX_Q_SIZE_)
+            {
+                    //const state_product* s = down_cast<const state_product*>(reverse_state[todo_q->top().state_hash_]);
+
+                std::cout << "\nreverse size: " << reverse.size() 
+                    << " todo_q size: " << todo_q->size() 
+                    << " visited size: " << visited.size() << endl <<endl;
+                cout << "cleaning priority queue... ";
+                auto start = chrono::steady_clock::now();
+                todo_q_cpy = new std::priority_queue<a_star_node, std::vector<a_star_node>, a_star_costcomparison>();
+                for(int i=0; i < NUM_CPY_FRM_Q_; i++)
+                {
+                    todo_q_cpy->push(todo_q->top());
+                    todo_q->pop();
+                }
+                delete todo_q;
+                todo_q = new std::priority_queue<a_star_node, std::vector<a_star_node>, a_star_costcomparison>();
+                swap(todo_q,todo_q_cpy);
+                delete todo_q_cpy;
+                auto end = chrono::steady_clock::now();
+                cout << "elapsed time in microseconds: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << endl;
+
+            }
         }
         if(found_plan){
             std::cout << "\nFOUND AN OPTIMAL PLAN ****\n" << "reverse size: " << reverse.size() 
-                    << " todo_q size: " << todo_q.size() 
+                    << " todo_q size: " << todo_q->size() 
                     << " visited size: " << visited.size() << endl;
 
             std::stack<const spot::state*> path = std::stack<const spot::state*> ();
@@ -823,6 +918,8 @@ public:
     
 private:
     spot::twa_product_ptr twa_prd_;
+    int MAX_Q_SIZE_ = 100000;
+    int NUM_CPY_FRM_Q_ = 50000;
     //auto cmp = [](std::pair<spot::state*,float> left, std::pair<spot::state*,float> right) 
     //{ return (left.second) < (right.second);};
     //prqueue todo;//(costcomparison);        

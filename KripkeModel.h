@@ -96,6 +96,7 @@ public:
     marine_robot_state(unsigned* state_num, unsigned* from_state_num, 
             spot::twa_graph_ptr org_model, mvspot::mv_interval* q_interval);
 
+    ~marine_robot_state();
 
     unsigned* get_state_num() const;
 
@@ -123,6 +124,8 @@ public:
     marine_robot_succ_iterator(unsigned* state_num, spot::twa_graph_ptr org_model, 
             bdd cond, mvspot::mv_interval* intervals);
 
+    ~marine_robot_succ_iterator();
+    
     bool first() override;
 
     bool next() override;
@@ -168,7 +171,7 @@ public:
 
 };
 
-extern marine_robot_kripke* shared_model_kripke;
+//extern marine_robot_kripke* shared_model_kripke;
 
 #endif /* KRIPKEMODEL_H */
 

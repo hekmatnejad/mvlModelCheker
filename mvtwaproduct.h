@@ -83,6 +83,10 @@ namespace spot
     {
       return right_;
     }
+    
+    unsigned get_count() const {
+        return count_;
+    }
 
     virtual int compare(const state* other) const override;
     virtual size_t hash() const override;
