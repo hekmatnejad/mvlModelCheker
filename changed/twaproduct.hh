@@ -1,24 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/* 
- * File:   mvtwaproduct.h
- * Author: mhekmatnejad
- *
- * Created on December 27, 2017, 5:25 PM
- */
-#pragma once
-
-#ifndef MV_TWAPRODUCT_H
-#define MV_TWAPRODUCT_H
-
-#include "MvLtlModel.h"
-
-
-
 // -*- coding: utf-8 -*-
 // Copyright (C) 2011, 2013, 2014, 2015, 2016 Laboratoire de Recherche
 // et Développement de l'Epita (LRDE).
@@ -41,11 +20,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#pragma once
+
 #include <spot/twa/twa.hh>
 #include <spot/misc/fixpool.hh>
 
-namespace mv
-{
 namespace spot
 {
 
@@ -54,7 +33,7 @@ namespace spot
   ///
   /// This state is in fact a pair of state: the state from the left
   /// automaton and that of the right.
-  class SPOT_API state_product final: public ::spot::state
+  class SPOT_API state_product final: public state
   {
   public:
     /// \brief Constructor
@@ -65,7 +44,7 @@ namespace spot
     /// be destroyed on destruction.
     state_product(const state* left,
                   const state* right,
-                  ::spot::fixed_size_pool* pool)
+                  fixed_size_pool* pool)
       :        left_(left), right_(right), count_(1), pool_(pool)
     {
     }
@@ -84,20 +63,16 @@ namespace spot
       return right_;
     }
     
-    unsigned get_count() const {
-        return count_;
-    }
-
+    
     virtual int compare(const state* other) const override;
     virtual size_t hash() const override;
     virtual state_product* clone() const override;
-    //void increase_steps() const;
-    //unsigned steps_;
+
   private:
     const state* left_;                ///< State from the left automaton.
     const state* right_;        ///< State from the right automaton.
     mutable unsigned count_;
-    ::spot::fixed_size_pool* pool_;
+    fixed_size_pool* pool_;
 
     virtual ~state_product();
     state_product(const state_product& o) = delete;
@@ -105,37 +80,35 @@ namespace spot
 
 
   /// \brief A lazy product.  (States are computed on the fly.)
-  class SPOT_API twa_product: public ::spot::twa
+  class SPOT_API twa_product: public twa
   {
   public:
     /// \brief Constructor.
     /// \param left The left automata in the product.
     /// \param right The right automata in the product.
     /// Do not be fooled by these arguments: a product is commutative.
-    twa_product(const ::spot::const_twa_ptr& left, const ::spot::const_twa_ptr& right);
-    //twa_product(const ::spot::const_twa_ptr& left, const ::spot::const_twa_ptr& right, mvspot::mv_interval* intervals);
+    twa_product(const const_twa_ptr& left, const const_twa_ptr& right);
+
     virtual ~twa_product();
 
-    virtual const ::spot::state* get_init_state() const override;
+    virtual const state* get_init_state() const override;
 
-    virtual ::spot::twa_succ_iterator*
-    succ_iter(const ::spot::state* state) const override;
+    virtual twa_succ_iterator*
+    succ_iter(const state* state) const override;
 
-    virtual std::string format_state(const ::spot::state* state) const override;
+    virtual std::string format_state(const state* state) const override;
 
-    virtual ::spot::state* project_state(const ::spot::state* s, const ::spot::const_twa_ptr& t)
+    virtual state* project_state(const state* s, const const_twa_ptr& t)
       const override;
 
-    const ::spot::acc_cond& left_acc() const;
-    const ::spot::acc_cond& right_acc() const;
+    const acc_cond& left_acc() const;
+    const acc_cond& right_acc() const;
 
   protected:
-    ::spot::const_twa_ptr left_;
-    ::spot::const_twa_ptr right_;
+    const_twa_ptr left_;
+    const_twa_ptr right_;
     bool left_kripke_;
-    ::spot::fixed_size_pool pool_;
-    mvspot::mv_interval* intervals_;
-
+    fixed_size_pool pool_;
 
   private:
     // Disallow copy.
@@ -144,35 +117,31 @@ namespace spot
   };
 
   /// \brief A lazy product with different initial states.
-  class SPOT_API twa_product_init final: public ::spot::twa_product
+  class SPOT_API twa_product_init final: public twa_product
   {
   public:
-    twa_product_init(const ::spot::const_twa_ptr& left, const ::spot::const_twa_ptr& right,
-                      const ::spot::state* left_init, const ::spot::state* right_init);
-    virtual const ::spot::state* get_init_state() const override;
+    twa_product_init(const const_twa_ptr& left, const const_twa_ptr& right,
+                      const state* left_init, const state* right_init);
+    virtual const state* get_init_state() const override;
   protected:
-    const ::spot::state* left_init_;
-    const ::spot::state* right_init_;
+    const state* left_init_;
+    const state* right_init_;
   };
 
   /// \brief on-the-fly TGBA product
-  inline ::spot::twa_product_ptr otf_product(const ::spot::const_twa_ptr& left,
-                                      const ::spot::const_twa_ptr& right)
+  inline twa_product_ptr otf_product(const const_twa_ptr& left,
+                                      const const_twa_ptr& right)
   {
-      std::cout << "*** in -> otf_product\n";
-    return std::make_shared<::spot::twa_product>(left, right);
-    //return std::make_shared<mvspot::mv_twa_product>(left, right, nullptr);
+    return std::make_shared<twa_product>(left, right);
   }
 
   /// \brief on-the-fly TGBA product with forced initial states
-  inline ::spot::twa_product_ptr otf_product_at(const ::spot::const_twa_ptr& left,
-                                        const ::spot::const_twa_ptr& right,
-                                        const ::spot::state* left_init,
-                                        const ::spot::state* right_init)
+  inline twa_product_ptr otf_product_at(const const_twa_ptr& left,
+                                        const const_twa_ptr& right,
+                                        const state* left_init,
+                                        const state* right_init)
   {
-    return std::make_shared<::spot::twa_product_init>(left, right,
+    return std::make_shared<twa_product_init>(left, right,
                                               left_init, right_init);
   }
-}//spot namespace
-}//mv namespace
-#endif /* MVTWAPRODUCT_HH */
+}

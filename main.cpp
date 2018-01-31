@@ -18,7 +18,7 @@
 #include "ModelGenerator.h"
 #include "KripkeModel.h"
 
-#include "mvtwaproduct.h"
+//#include "mvtwaproduct.h"
 
 #include <mutex>
 #include <iomanip>
@@ -31,6 +31,8 @@
 #include <spot/ta/taproduct.hh>
 #include <spot/twa/taatgba.hh>
 #include <valarray>
+#include <spot/ta/tgtaproduct.hh>
+#include <spot/twaalgos/product.hh>
 //#include <spot/tl/dot.hh>
 //#include <spot/taalgos/dot.hh>
 //#include "secondary.h"
@@ -41,7 +43,8 @@ using namespace std;
 float CERTAINTY_THREASHOLD = 1;
 
 void model_4(string formula);
-void dfs(spot::const_twa_graph_ptr aut, bdd query);
+void dfs_twa_graph(spot::const_twa_graph_ptr aut, bdd query);
+void dfs_twa(spot::const_twa_ptr aut);
 //int get_random(int low, int high);
 static spot::parsed_aut_ptr read_model_aut;
 static spot::kripke_graph_ptr kg_model;
@@ -51,8 +54,9 @@ std::map<int, geo_pos*>* geo_locations;
 int MAX_GEO_X;
 int MAX_GEO_Y;
 float MAX_GEO_DIST;
+void test();
 
-//spot::twa_graph_ptr shared_formula_graph;
+///spot::twa_graph_ptr shared_formula_graph;
 
 /*
  * 
@@ -63,11 +67,9 @@ int main(int argc, char** argv) {
     cout << mvspot::getVersion() << "\n" << mvspot::getBuild() << "\n";
 
     mvspot::test_intervals();
-    //if(true) return 0;
-
-std:
+    test();
     ifstream inFile;
-    //string model_filename = "ocean_model.dot";
+    //string model_filename = "sirle2018/road_network_model_test.dot";
     string model_filename = "sirle2018/road_network_model.dot";
     srand(time(NULL));
     read_model_aut = Util::readAutFromFile(model_filename, false, shared_dict);
@@ -118,7 +120,7 @@ int get_random(int low, int high) {
     return (int) (low + (float) rand() / RAND_MAX * (high - low));
 }
 
-void dfs(spot::const_twa_graph_ptr aut, bdd query) {
+void dfs_twa_graph(spot::const_twa_graph_ptr aut, bdd query) {
     std::vector<bool> seen(aut->num_states());
     std::stack<unsigned> todo; // Now storing edges numbers
     auto& gr = aut->get_graph();
@@ -149,6 +151,51 @@ void dfs(spot::const_twa_graph_ptr aut, bdd query) {
     }
 }
 
+void dfs_twa(spot::const_twa_ptr aut)
+{
+  spot::state_unicity_table seen;
+  std::stack<std::pair<const spot::state*,
+                       spot::twa_succ_iterator*>> todo;
+
+  // push receives a newly-allocated state and immediately store it in
+  // seen.  Therefore any state on todo is already in seen and does
+  // not need to be destroyed.
+  auto push = [&](const spot::state* s)
+    {
+       if (seen.is_new(s))
+         {
+           spot::twa_succ_iterator* it = aut->succ_iter(s);
+           if (it->first())
+             todo.emplace(s, it);
+           else                 // No successor for s
+             aut->release_iter(it);
+         }
+    };
+  push(aut->get_init_state());
+  while (!todo.empty())
+    {
+       const spot::state* src = todo.top().first;
+       spot::twa_succ_iterator* srcit = todo.top().second;
+       const spot::state* dst = srcit->dst();
+       std::cout << aut->format_state(src) << "->"
+                 << aut->format_state(dst) << '\n';
+       // Advance the iterator, and maybe release it.
+
+       if (!srcit->next())
+         {
+            spot::twa_succ_iterator* it = aut->succ_iter(src);
+            int c = 0;
+            if(it->first())
+                c++;
+            while(it->next())
+                c++;
+            cout << "num edges: " << c << endl;
+            aut->release_iter(srcit);
+            todo.pop();
+         }
+       push(dst);
+    }
+}
 
 void model_4(string formula) {
     cout << ">>> in model_4\n";
@@ -171,6 +218,8 @@ void model_4(string formula) {
     str_loc[0] = new string[2];
     str_loc[0][0] = "C1_loc_1";
     str_loc[0][1] = "C1_loc_9";
+//    str_loc[0][0] = "C1_loc_1";
+//    str_loc[0][1] = "C1_loc_2";
     //str_loc[0][1] = "C1_loc_5";
     //str_loc[0][1] = "C1_loc_6";
     //str_loc[0][1] = "C1_loc_7";
@@ -178,6 +227,8 @@ void model_4(string formula) {
     str_loc[1] = new string[2];
     str_loc[1][0] = "C2_loc_4";
     str_loc[1][1] = "C2_loc_12";
+//    str_loc[1][0] = "C2_loc_1";
+//    str_loc[1][1] = "C2_loc_2";
     }
     list<string>* lst_loc;
     lst_loc = new list<string>[NUM_CARS];
@@ -211,8 +262,17 @@ void model_4(string formula) {
     //formula = "G(\"q=[0.5,1]\") &  F(C2_loc_4) & F(C2_loc_12) & ((!C2_loc_12) U C2_loc_4) "
     //        " & G(!C2_loc_4 | !C2_loc_12)"
     //        "";
+
+    //formula = "F(C1_loc_1) & F(C1_loc_2) & ((!C1_loc_2) U C1_loc_1) "
+    //        " & G(!C1_loc_1 | !C1_loc_2) ";
+            //" & F(C2_loc_1) & F(C2_loc_2) & ((!C2_loc_2) U C2_loc_1) "
+            //" & G(!C2_loc_1 | !C2_loc_2) ";
     
-    //formula = "C1_loc_5 & X C1_loc_6 & XX C1_loc_7";
+    //init_state[0] = 0;
+    //init_state[1] = 0;
+
+    
+    //formula = "C1_loc_0 & X C1_loc_1 & XX C1_loc_2";
 
     if(COLLISION_AVOIDANCE)
         formula += " & G " + collision_symbol;
@@ -230,14 +290,20 @@ void model_4(string formula) {
     //spot::formula f = spot::formula::Not(pf.f);
     spot::formula f = pf.f;
     spot::twa_graph_ptr af = spot::translator(shared_dict).run(f);
-
     Util::write2File("new_formula_org.dot", af);
-    
+    //dfs_twa_graph(af,bddtrue);
+    //cout <<".............\n";    
     //update intervals on the edges
     mvspot::interval_bdd::simplify_interval_formula_twa(af);
     
     Util::write2File("new_formula.dot", af);
-    shared_formula_graph = af;
+    af->merge_edges();
+    af->merge_univ_dests();
+    af->purge_dead_states();
+    af->purge_unreachable_states();
+    shared_formula_graph = af;//***********
+    //dfs_twa_graph(af,bddtrue);
+    
     
     mvspot::mv_interval* shared_intervals = mvspot::create_interval_set("certainty", "q", 5);
     shared_intervals->add_interval("q=[1,1]",1,1);
@@ -252,19 +318,18 @@ void model_4(string formula) {
         
         cout << "interval: " << it.first << "\n" << *(it.second->getTo_lattice_()) << endl;
     }
-    //if(true) return;
+
     // Find a run of or marine_robot_kripke that intersects af.
     auto k = std::make_shared<marine_robot_kripke>(shared_dict, str_certainty_ap, aut_model,
             init_state, lst_loc, shared_intervals);
-    
+   
+  //dfs_twa(k);
+
     //shared_model_kripke = static_cast<marine_robot_kripke*>(k);
     // Convert demo_kripke into an explicit graph
-  spot::twa_graph_ptr kg =
-    spot::make_twa_graph(k,
-                         spot::twa::prop_set::all());
-      Util::write2File("merged_model.dot", kg);
+    spot::twa_graph_ptr kg = spot::make_twa_graph(k, spot::twa::prop_set::all());
+    Util::write2File("merged_model.dot", kg);
 
-    
     cout << "accepting condition <model>: " << k->acc() << " and formulas:\n";
     for(spot::formula f:  k->ap())
         cout << f <<endl;
@@ -277,7 +342,9 @@ void model_4(string formula) {
         cout << f <<endl;
     //k->mv_intersecting_run(af);
     //if(true) return;
-    
+    //auto prd = spot::otf_product(k,af);//do not forget to disable clear_todo_queue
+    //Util::write2File("product.dot", prd);
+    //return;
     
     if (auto run = k->intersecting_run(af))
         std::cout << "found a plan by the following run:\n" << *run;
@@ -288,3 +355,7 @@ void model_4(string formula) {
     // mvtp.test_me_again();
 }
 
+void test()
+{
+    
+}

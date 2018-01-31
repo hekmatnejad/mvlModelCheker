@@ -564,10 +564,59 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
         }
         return std::make_pair(replaced_f_p,replaced_f_n);
     }
-    
-    void interval_bdd::simplify_interval_formula_twa(spot::twa_graph_ptr &aut)
+
+    void interval_bdd::simplify_interval_formula_twa(spot::twa_graph_ptr &aut) {
+        std::vector<bool> seen(aut->num_states());
+        std::stack<unsigned> todo; // Now storing edges numbers
+        auto& gr = aut->get_graph();
+        auto push_state = [&](unsigned state) {
+            todo.push(gr.state_storage(state).succ);
+            seen[state] = true;
+        };
+        push_state(aut->get_init_state_number());
+        while (!todo.empty()) {
+            unsigned edge = todo.top();
+            todo.pop();
+            if (edge == 0U) // No more outgoing edge
+                continue;
+            auto& e = gr.edge_storage(edge);
+
+            todo.push(e.next_succ); // Prepare next sibling edge.
+            if (!seen[e.dst])
+                push_state(e.dst);
+            //std::cout << e.src << "->" << e.dst << '\n';
+
+            //---------------------//
+            spot::formula f_base = bdd_to_formula(e.cond, aut->get_dict());
+            std::vector<spot::formula> vec_f = std::vector<spot::formula>();
+            //loop around DNF formula base
+            if(f_base.kind() == op::Or){
+                for(int i=0; i<f_base.size(); i++)
+                    vec_f.emplace_back(f_base[i]);
+            }
+            else
+                vec_f.emplace_back(f_base);  
+            std::vector<spot::formula> formula_conj = std::vector<spot::formula>();
+            for(std::vector<spot::formula>::iterator it = vec_f.begin(); it!= vec_f.end(); ++it)
+            {
+                map_interval_base_->clear();
+                f_base = remove_negation_from_interval_formula((*it), aut->get_dict());
+                f_base = simplify_conjuctive_formula(f_base, aut->get_dict());
+                formula_conj.push_back(f_base);
+            }        
+            spot::formula new_f = spot::formula::Or(formula_conj);
+
+
+            //aut->edge_data(srcit).cond = spot::formula_to_bdd(new_f,aut->get_dict(),NULL);
+            e.cond = spot::formula_to_bdd(new_f,aut->get_dict(),NULL);
+            //---------------------//
+
+        }
+    }
+
+    void interval_bdd::simplify_interval_formula_twa_graph(spot::twa_graph_ptr &aut)
     {
-    
+        
         /*
          * DFS traversing the automaton
          */
@@ -621,8 +670,8 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
             aut->edge_data(srcit).cond = spot::formula_to_bdd(new_f,aut->get_dict(),NULL);
             //---------------------//
 
-            std::cout << aut->format_state(src) << "->"
-                    << aut->format_state(dst) << '\n';
+            //std::cout << aut->format_state(src) << "->"
+            //        << aut->format_state(dst) << '\n';
             // Advance the iterator, and maybe release it.
             if (!srcit->next()) {
                 aut->release_iter(srcit);
@@ -632,7 +681,6 @@ mv_interval* mv_interval::psi_mv(mv_interval* base, mv_interval* given){
         }    
     
     }
-
     
     std::pair<mv_interval*,bdd> interval_bdd::apply_and(bdd base, bdd model, spot::bdd_dict_ptr dict_){
         

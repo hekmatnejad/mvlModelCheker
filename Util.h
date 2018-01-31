@@ -19,7 +19,7 @@
 #include <istream>
 #include <iostream>
 #include <fstream>
-#include "mvtwaproduct.h"
+//#include "mvtwaproduct.h"//
 #include <spot/parseaut/public.hh>
 
 class Util {

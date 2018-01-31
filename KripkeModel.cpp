@@ -327,7 +327,6 @@ mvspot::mv_interval* mvspot::interval_bdd::shared_intervals_ = spot::twa::shared
     marine_robot_succ_iterator::marine_robot_succ_iterator(unsigned* state_num, spot::twa_graph_ptr org_model, 
             bdd cond, mvspot::mv_interval* intervals)
     : kripke_succ_iterator(cond), org_model_(org_model) {
-        //std::cout << "in: marine_robot_succ_iterator\n";
         
         intervals_ = intervals;
         state_num_ = new unsigned[NUM_CARS];
@@ -342,21 +341,21 @@ mvspot::mv_interval* mvspot::interval_bdd::shared_intervals_ = spot::twa::shared
     marine_robot_succ_iterator::~marine_robot_succ_iterator() {
         delete [] state_num_;
         delete [] aut_succ_;
-        //cout << "-";
     }
 
     bool marine_robot_succ_iterator::first() {
 
-        bool res = false;
+        bool res = true;//false
         for (int i = 0; i < NUM_CARS; i++) {
-            res |= aut_succ_[i]->first();
+            res &= aut_succ_[i]->first();
         }
+        //if(res)//this causes self-loop removal
+        //    return next();
         return res;
     }
 
     bool marine_robot_succ_iterator::next() {
         
-        bool res = true;//false
         for (int i = 0; i < NUM_CARS; i++){
             if(aut_succ_[i]->next()){
                 return true;
@@ -368,10 +367,11 @@ mvspot::mv_interval* mvspot::interval_bdd::shared_intervals_ = spot::twa::shared
 
     bool marine_robot_succ_iterator::done() const {
         
-        bool res = true;//true
-        for (int i = 0; i < NUM_CARS; i++)
-            res &= aut_succ_[i]->done();
-        return res;
+        //bool res = true;//true
+        //for (int i = 0; i < NUM_CARS; i++)
+        //    res &= aut_succ_[i]->done();
+        //return res;
+        return aut_succ_[NUM_CARS-1]->done();
     }
 
     marine_robot_state* marine_robot_succ_iterator::dst() const {
@@ -452,7 +452,6 @@ mvspot::mv_interval* mvspot::interval_bdd::shared_intervals_ = spot::twa::shared
     }
 
     marine_robot_state* marine_robot_kripke::get_init_state() const {
-
         unsigned* init_state = new unsigned[NUM_CARS];
         unsigned* from_init_state = new unsigned[NUM_CARS];
         mvspot::mv_interval* itv = nullptr;
@@ -517,7 +516,6 @@ mvspot::mv_interval* mvspot::interval_bdd::shared_intervals_ = spot::twa::shared
 
     bdd marine_robot_kripke::state_condition(const spot::state* s) const {
         //cout <<"in: state_condition\n";
-
         auto ss = static_cast<const marine_robot_state*> (s);
         bdd res = bddtrue;
 
@@ -593,7 +591,7 @@ mvspot::mv_interval* mvspot::interval_bdd::shared_intervals_ = spot::twa::shared
         out << "(state_num = " << str_state
                 //<< ", is_certain = " << ss->is_certain() 
                 //<< ", t = " << ss->get_time() 
-                << ')' << bdd_to_formula(this->state_condition(s),dict_);
+                << ')' ;//<< bdd_to_formula(this->state_condition(s),dict_);
         return out.str();
     }
 
