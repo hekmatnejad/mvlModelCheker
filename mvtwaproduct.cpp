@@ -979,9 +979,11 @@ public:
                   )
                 {
                     //cout << ".";tit->steps_
+                    //cout << std::to_string(1-((tit->steps_)/25.0)) << "\n";
                     todo_q->push(a_star_node(tit_dst->hash(), 
-                            //min_c+(tit->inf()+tit->sup())/2.0 , min_c+ 1-((tit->steps_)/10.0) ));
-                            min_c+(tit->inf()+tit->sup())/2.0 , min_c+tit->cost_inf() ));
+                            //min_c+(tit->inf()+tit->sup())/2.0 , min_c+ 1-((tit->steps_)/25.0) ));
+                            //min_c+(tit->inf()+tit->sup())/2.0 , min_c+tit->cost_inf() ));
+                            min_c+(tit->inf()+tit->sup())/2.0 , 1 ));
                     total_cost_map[tit_dst->hash()] = min_c+(tit->inf()+tit->sup())/2.0;
                     state_cost_map_[tit_dst->hash()] = (tit->inf()+tit->sup())/2.0;
                     reverse[tit_dst->hash()].push(cs->hash());
@@ -1376,7 +1378,7 @@ public:
 private:
     spot::twa_product_ptr twa_prd_;
     int MAX_Q_SIZE_ = 20000;//50000;
-    int NUM_CPY_FRM_Q_ = 5000;//10000;
+    int NUM_CPY_FRM_Q_ = 10000;//10000;
     std::map<size_t,std::stack<size_t>> reverse_;
     float cycle_cost_;
     std::map<size_t,float> state_cost_map_;
