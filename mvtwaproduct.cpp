@@ -68,6 +68,7 @@ namespace spot
   void
   state_product::destroy() const
   {
+    delete look_ahead_loc_;
     if (--count_)
       return;
     fixed_size_pool* p = pool_;
@@ -114,24 +115,17 @@ namespace spot
                                         fixed_size_pool* pool)
         : left_(left), right_(right), prod_(prod), pool_(pool)
       {
+            
       }
 
-      twa_succ_iterator_product_common(twa_succ_iterator* left,
-                                        twa_succ_iterator* right, unsigned steps,
-                                        const twa_product* prod,
-                                        fixed_size_pool* pool)
-        : left_(left), right_(right), steps_(steps), prod_(prod), pool_(pool)
-      {
-      }
-        
       void recycle(const const_twa_ptr& l, twa_succ_iterator* left,
-                   const_twa_ptr r, twa_succ_iterator* right, unsigned steps)
+                   const_twa_ptr r, twa_succ_iterator* right)
       {
         l->release_iter(left_);
         left_ = left;
         r->release_iter(right_);
         right_ = right;
-        steps_ = steps;
+        
       }
 
       virtual ~twa_succ_iterator_product_common()
@@ -167,15 +161,11 @@ namespace spot
 
       const state_product* dst() const override
       {
-//        return new(pool_->allocate()) state_product(left_->dst(),
-//                                                    right_->dst(),
-//                                                    pool_);
-        return new(pool_->allocate()) state_product(left_->dst(),
-                                                    right_->dst(), steps_,
+          return new(pool_->allocate()) state_product(left_->dst(),
+                                                    right_->dst(), 
                                                     pool_);
       }
 
-      unsigned steps_ = 0;
 
     protected:
       twa_succ_iterator* left_;
@@ -268,11 +258,13 @@ namespace spot
       }
 
       twa_succ_iterator_product_kripke(twa_succ_iterator* left,
-                                        twa_succ_iterator* right, unsigned steps,
+                                        twa_succ_iterator* right, 
+                                        std::map<int,std::vector<int>>* look_ahead_loc,
                                         const twa_product* prod,
                                         fixed_size_pool* pool)
-        : twa_succ_iterator_product_common(left, right, steps, prod, pool)
+        : twa_succ_iterator_product_common(left, right, prod, pool)
       {
+          look_ahead_loc_ = look_ahead_loc;//must be here
       }
 
       virtual ~twa_succ_iterator_product_kripke()
@@ -473,28 +465,36 @@ float find_dist_to_locs_graph_cpy_2(unsigned* state_num, const tuple_edge& f_sta
     return res;
             }
 
-float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state, std::map<int, std::vector<int>>* &look_ahead_loc) {
+struct cost_loc_st{
+    float cost_g = 0;
+    float cost_h = 0;
+};
+
+cost_loc_st find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state, std::map<int, std::vector<int>>* &look_ahead_loc) {
     std::map<int, std::list<symbol_stc>*>* s_map = (*shared_locs).at(f_state);
-    float min_dist[NUM_CARS];
-    float res = 0;
-    bool found = false;
-    for (int i = 0; i < NUM_CARS; i++) {
-        min_dist[i] = MAX_GEO_DIST;
-        found = false;
-        std::list<symbol_stc>* s_list = (*s_map)[i + 1];
+    //float min_dist[NUM_CARS];
+    cost_loc_st res;
+    res.cost_g = 0;
+    res.cost_h = 0;    bool found = false;
+    for (int i = 0; i < NUM_CARS; i++) 
+    {
+        //min_dist[i] = MAX_GEO_DIST;
+        //found = false;
+        //std::list<symbol_stc>* s_list = (*s_map)[i + 1];
         int f_loc = 0;
         float dist = 0;
-        if((*look_ahead_loc)[i+1].empty()){
-            cout << "\nEEEERRRROOORRR\n\n";
-            min_dist[i] = 0;
-        }
+        //if((*look_ahead_loc)[i+1].empty()){
+            //cout << "\nEEEERRRROOORRR\n\n";
+        //}
         if((*look_ahead_loc)[i+1].size() >= 1)
         {
             f_loc = (*(*look_ahead_loc)[i+1].begin());
+            //cout << " x: " << (*geo_locations)[state_num[i]]->x_ << "-" << (*geo_locations)[f_loc]->x_ << endl;
+            //cout << " y: " << (*geo_locations)[state_num[i]]->y_ << "-" << (*geo_locations)[f_loc]->y_ << endl;
             dist = std::pow((*geo_locations)[state_num[i]]->x_ - (*geo_locations)[f_loc]->x_, 2);
             dist += std::pow((*geo_locations)[state_num[i]]->y_ - (*geo_locations)[f_loc]->y_, 2);
             dist = std::sqrt(dist);
-            min_dist[i] = dist;
+            res.cost_g += dist;
         }
         if((*look_ahead_loc)[i+1].size() > 1)
         {
@@ -508,16 +508,11 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state, st
                 td = std::pow((*geo_locations)[current]->x_ - (*geo_locations)[next]->x_, 2);
                 td += std::pow((*geo_locations)[current]->y_ - (*geo_locations)[next]->y_, 2);
                 td = std::sqrt(td);
-                min_dist[i] += td;
+                res.cost_h += td;
             }
         }
 
-        res += min_dist[i];
     }
-
-    if (!found && res == 0)
-        res = NUM_CARS * 1;
-    //cout << res<<endl;
     return res;
 }
 
@@ -549,13 +544,16 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state, st
                 tuple_edge te(shared_formula_graph->edge_storage(right_).src,
                         shared_formula_graph->edge_storage(right_).dst,
                         spot::bdd_format_formula(shared_dict,right_->cond()));
-                loc_dist_ = find_dist_to_locs_graph(mrs->get_state_num(), te, look_ahead_loc_);
+                
+                dst_cost_ = find_dist_to_locs_graph(mrs->get_state_num(), te, look_ahead_loc_);
+
+                look_ahead_loc_tmp = new std::map<int,std::vector<int>>(*look_ahead_loc_);
                 
                 //update future vising locations based on the formula transition location symbols
                     if(te.src_ != te.dst_)
                     {
                         std::map<int, std::list<symbol_stc>*>* s_map = (*shared_locs).at(te);
-
+                        //cout << te.src_ << "->" << te.dst_ << " : ";
                     for(int i=0; i< NUM_CARS; i++)
                     {
                         std::list<symbol_stc>* s_list = (*s_map)[i + 1];
@@ -563,24 +561,26 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state, st
                         {
                             if ( (*it).type == symbol_type::POSITIVE) 
                             {
-                                for(std::vector<int>::iterator tt = (*look_ahead_loc_)[i+1].begin(); tt != (*look_ahead_loc_)[i+1].end(); ++tt)
+                                //cout << (*it).loc << " ";
+                                for(std::vector<int>::iterator tt = (*look_ahead_loc_tmp)[i+1].begin(); tt != (*look_ahead_loc_tmp)[i+1].end(); ++tt)
                                 {
-                                    //if((*tt)==(*it).loc)
-                                    //    (*look_ahead_loc_)[i+1].erase(tt);
+                                    if((*tt)==(*it).loc){
+                                        (*look_ahead_loc_tmp)[i+1].erase(tt);
+                                        break;
+                                    }
                                 }
-                                
                             }
                         }
                     }
-
+                        //cout << endl;
                     
                 }
-
-                inf_ = NUM_CARS + 1 - itv_res.first->getButtom()->getValue();
-                sup_ = NUM_CARS + 1 - itv_res.first->getTop()->getValue();
+              
+                inf_ = 1 - itv_res.first->getButtom()->getValue();
+                sup_ = 1 - itv_res.first->getTop()->getValue();
                 
-                cost_inf_ = loc_dist_ + 1 - itv_res.first->getButtom()->getValue();
-                cost_sup_ = loc_dist_ + 1 - itv_res.first->getTop()->getValue();
+                cost_inf_ = inf_;
+                cost_sup_ = sup_;
                 
                 
                 mrs->destroy();
@@ -599,14 +599,15 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state, st
 
       bool next() override
       {
-        if (left_->next())
+        if (left_->next()){
             return true;
+        }
         left_->first();
         bool res;
         if (right_->next()){
             //cout << "\n\nnext: " << shared_formula_graph->edge_storage(right_).src << " -> "<<
             //        shared_formula_graph->edge_storage(right_).dst <<  endl;
-            steps_++;
+            //steps_++;
             res = next_non_false_();
         }
         if(res){
@@ -633,14 +634,24 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state, st
             return false;
           }
         bool res = next_non_false_();
-        if(res){
+        //if(res){
             //cout << "\n\nfirst: " << shared_formula_graph->edge_storage(right_).src << " -> "<<
             //        shared_formula_graph->edge_storage(right_).dst <<  endl;
             //clear_todo_queue = true;
-        }
+        //}
         return res;
       }
 
+      const state_product* dst() const override
+      {
+        //cout << (*look_ahead_loc_tmp)[1].size() << " , " << (*look_ahead_loc_tmp)[2].size() << endl;
+        std::map<int,std::vector<int>>* look_ahead_loc = new std::map<int,std::vector<int>>(*look_ahead_loc_tmp);
+        return new(pool_->allocate()) state_product(left_->dst(),
+                                                    right_->dst(), 
+                                                    look_ahead_loc,
+                                                    pool_);
+      }      
+      
       bool done() const override
       {
         return !right_|| right_->done();
@@ -650,6 +661,17 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state, st
       {
         return current_cond_;
       }
+      
+      void recycle(const const_twa_ptr& l, twa_succ_iterator* left,
+                   const_twa_ptr r, twa_succ_iterator* right,  std::map<int,std::vector<int>>* look_ahead_loc)
+      {
+        l->release_iter(left_);
+        left_ = left;
+        r->release_iter(right_);
+        right_ = right;
+        look_ahead_loc_ = look_ahead_loc;
+        
+      }      
       
       float cost_inf() 
       {
@@ -671,9 +693,9 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state, st
           return sup_;
       }
       
-      float loc_dist() 
+      cost_loc_st dst_cost() 
       {
-          return loc_dist_;
+          return dst_cost_;
       }
 
       acc_cond::mark_t acc() const override
@@ -688,17 +710,19 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state, st
       
       std::map<int,std::vector<int>>* get_look_ahead_loc()
       {
-          return look_ahead_loc_;
+          return look_ahead_loc_tmp;
       }
+
+      std::map<int,std::vector<int>>* look_ahead_loc_;
+      std::map<int,std::vector<int>>* look_ahead_loc_tmp;
 
     protected:
       bdd current_cond_ = bddtrue;
       float cost_inf_ = _MAX_COST;//primary cost 
       float cost_sup_ = _MAX_COST;//secondary cost
-      float loc_dist_ = _MAX_DIST;//A star helper
+      cost_loc_st dst_cost_;//A star helper
       float inf_ = NUM_CARS;
       float sup_ = NUM_CARS;
-      std::map<int,std::vector<int>>* look_ahead_loc_;
       
     };
 
@@ -706,15 +730,6 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state, st
 
   ////////////////////////////////////////////////////////////
   // twa_product
-
-  
-    //twa_product::twa_product(const const_twa_ptr& left,
-    //                         const const_twa_ptr& right, mvspot::mv_interval* intervals)
-    //: twa(left->get_dict()), left_(left), right_(right),
-    //  pool_(sizeof(state_product))
-//    : twa_product(left, right), intervals_(interval)
-    //{
-    //}
 
   
   twa_product::twa_product(const const_twa_ptr& left,
@@ -788,9 +803,10 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state, st
   const state*
   twa_product::get_init_state() const
   {
+    std::map<int,std::vector<int>>* look_ahead_loc = new std::map<int,std::vector<int>>(*look_ahead_loc_);
     fixed_size_pool* p = const_cast<fixed_size_pool*>(&pool_);
     return new(p->allocate()) state_product(left_->get_init_state(),
-                                            right_->get_init_state(), p);
+                                            right_->get_init_state(),look_ahead_loc, p);
   }
 
   twa_succ_iterator*
@@ -799,19 +815,18 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state, st
     const state_product* s = down_cast<const state_product*>(state);
     twa_succ_iterator* li = left_->succ_iter(s->left());
     twa_succ_iterator* ri = right_->succ_iter(s->right());
-    
-    if (iter_cache_)
-      {
-        twa_succ_iterator_product_common* it =
-          down_cast<twa_succ_iterator_product_common*>(iter_cache_);
-        it->recycle(left_, li, right_, ri, s->steps_+1);
-        iter_cache_ = nullptr;
-        return it;
-      }
+//    if (iter_cache_)
+//      {
+//        twa_succ_iterator_product_common* it =
+//          down_cast<twa_succ_iterator_product_common*>(iter_cache_);
+//        it->recycle(left_, li, right_, ri);
+//        iter_cache_ = nullptr;
+//        return it;
+//      }
 
     fixed_size_pool* p = const_cast<fixed_size_pool*>(&pool_);
     if (left_kripke_)
-      return new twa_succ_iterator_product_kripke(li, ri, s->steps_+1, this, p);
+      return new twa_succ_iterator_product_kripke(li, ri, s->look_ahead_loc_, this, p);
     else
       return new twa_succ_iterator_product(li, ri, this, p);
   }
@@ -868,8 +883,9 @@ float find_dist_to_locs_graph(unsigned* state_num, const tuple_edge& f_state, st
   twa_product_init::get_init_state() const
   {
     fixed_size_pool* p = const_cast<fixed_size_pool*>(&pool_);
+    std::map<int,std::vector<int>>* look_ahead_loc = new std::map<int,std::vector<int>>(*look_ahead_loc_);
     return new(p->allocate()) state_product(left_init_->clone(),
-                                            right_init_->clone(), p);
+                                            right_init_->clone(), look_ahead_loc, p);
   }
 //--------------------------
 
@@ -1042,17 +1058,21 @@ public:
                 reverse_state = std::map<size_t,const spot::state*>();
         size_t target;
         size_t start;
-        std::pair<const spot::state*,float> item = 
-                std::make_pair(twa_prd_->get_init_state(),0);
-        std::cout << "init state: " << 
-                twa_prd_->format_state(twa_prd_->get_init_state()) << endl << endl;
-        std::map<int,std::vector<int>>* look_aheads = new std::map<int,std::vector<int>>();
+        std::map<int,std::vector<int>>* 
+                look_aheads = new std::map<int,std::vector<int>>();
         (*look_aheads)[1].push_back(9);
         (*look_aheads)[1].push_back(1);
         (*look_aheads)[2].push_back(4);
         (*look_aheads)[2].push_back(12);
-        todo_q->push(a_star_look_ahead_node(twa_prd_->get_init_state()->hash(),
-                twa_prd_->get_init_state()->hash(),0,0,0,look_aheads));
+        twa_prd_->look_ahead_loc_ = look_aheads;
+        const spot::state * init_state = twa_prd_->get_init_state();
+        std::pair<const spot::state*,float> item = 
+                std::make_pair(init_state,0);
+        std::cout << "init state: " << 
+                twa_prd_->format_state(init_state) << endl << endl;
+
+        todo_q->push(a_star_look_ahead_node(init_state->hash(),
+                init_state->hash(),0,0,0,0));
         start = item.first->hash();
         state_cost_map_[start] = 0;
         total_cost_map[start] = 0;
@@ -1063,43 +1083,46 @@ public:
         const spot::state* cs;//current state
         float min_c = 0;
         float optimal_cost = -1;
+        int steps = 100;
         while(!todo_q->empty())
         {
+            //if(!(steps--))
+            //    exit(0);
             //auto start = chrono::steady_clock::now();
-
             a_star_look_ahead_node node(todo_q->top());
             todo_q->pop();
             visited.insert(node.state_hash_);
             cs = reverse_state[node.state_hash_];//do not need the state, hash is fine
             min_c = total_cost_map[node.state_hash_];//solid
-            
+
             twa_succ_iterator_product_kripke* tit = 
                     down_cast<twa_succ_iterator_product_kripke*>
                     (twa_prd_->succ_iter(cs));
-            
-            tit->set_look_ahead_loc(node.look_ahead_loc_);
-            
+
+            //tit->set_look_ahead_loc(node.look_ahead_loc_);
             if(!tit->first()){
                 //cout << "!tit->first()\n";
+                //delete tit->look_ahead_loc_tmp;
+                //delete tit->look_ahead_loc_;
                 twa_prd_->release_iter(tit);
                 continue;
             }
             if(tit->cond() == bddfalse)
-                cout << ".";
+                cout << "\n.\n";
             while(!tit->done() && tit->cond()!=bddfalse)
             {
-
                 const spot::state_product* tit_dst = tit->dst();
+                //cout <<"-> " << twa_prd_->format_state(tit_dst) << endl;//twa_prd_->format_state(st) << endl;
                 
-//                twa_succ_iterator_product_kripke* tmp = 
-//                    down_cast<twa_succ_iterator_product_kripke*>
-//                    (twa_prd_->succ_iter(tit_dst));
-//                if(!tmp->first() || tmp->cond()==bddfalse){
-//                    tit->next();
-//                    twa_prd_->release_iter(tmp);
-//                    tit_dst->destroy();
-//                    continue;
-//                }
+                twa_succ_iterator_product_kripke* tmp = 
+                    down_cast<twa_succ_iterator_product_kripke*>
+                    (twa_prd_->succ_iter(tit_dst));
+                if(!tmp->first() || tmp->cond()==bddfalse){
+                    tit->next();
+                    twa_prd_->release_iter(tmp);
+                    tit_dst->destroy();
+                    continue;
+                }
 
 
                 if(twa_prd_->right_acc().accepting(tit->acc()) && 
@@ -1116,15 +1139,20 @@ public:
                     found_plan = true;
                     break;
                 }
+                //float cost_g = tit->dst_cost().cost_g + (tit->cost_sup()+tit->cost_sup())/2.0;
+                float cost_g =  NUM_CARS + (tit->cost_inf()+tit->cost_sup())/2.0;
+                float cost_f1 = min_c + tit->dst_cost().cost_g + tit->dst_cost().cost_h + tit->cost_inf();
+                float cost_f2 = min_c + tit->dst_cost().cost_g + tit->dst_cost().cost_h + tit->cost_sup();
+                
+                //cout <<"-> " << twa_prd_->format_state(tit_dst) << " cost_g: "<< tit->dst_cost().cost_g <<  " cost_h: "<< tit->dst_cost().cost_h << endl;
+                    
                 if(visited.find(tit_dst->hash()) == visited.end()
                   )
                 {
-                    look_aheads = new std::map<int,std::vector<int>>(*tit->get_look_ahead_loc());
-                    
                     todo_q->push(a_star_look_ahead_node(tit_dst->hash(), cs->hash(), 
-                            min_c+(tit->inf()+tit->sup())/2.0 , 1, 1, look_aheads ));
-                    total_cost_map[tit_dst->hash()] = min_c+(tit->inf()+tit->sup())/2.0;
-                    state_cost_map_[tit_dst->hash()] = (tit->inf()+tit->sup())/2.0;
+                            cost_f1 , cost_f2, 1, 0 ));
+                    total_cost_map[tit_dst->hash()] = min_c + cost_g;
+                    state_cost_map_[tit_dst->hash()] = cost_g;
                     reverse[tit_dst->hash()].push(cs->hash());
                     if(reverse_state.find(tit_dst->hash()) == reverse_state.end())
                         reverse_state[tit_dst->hash()] = tit_dst;
@@ -1133,12 +1161,12 @@ public:
                 }
                 else if(     visited.find(tit_dst->hash()) != visited.end() 
                         &&
-                        total_cost_map[tit_dst->hash()] > (min_c+(tit->inf()+tit->sup())/2.0)
+                        total_cost_map[tit_dst->hash()] > (min_c + cost_g)
                   )
                 {
                     //cout << "+";
-                    total_cost_map[tit_dst->hash()] = min_c+(tit->inf()+tit->sup())/2.0;
-                    state_cost_map_[tit_dst->hash()] = (tit->inf()+tit->sup())/2.0;
+                    total_cost_map[tit_dst->hash()] = min_c + cost_g;
+                    state_cost_map_[tit_dst->hash()] = cost_g;
                     reverse[tit_dst->hash()].push(cs->hash());
                     //if(reverse_state.find(tit_dst->hash()) == reverse_state.end())
                     //    reverse_state[tit_dst->hash()] = tit_dst;
@@ -1150,7 +1178,7 @@ public:
                     tit_dst->destroy();
                 }
 
-                //twa_prd_->release_iter(tmp);
+                twa_prd_->release_iter(tmp);
 
                 if(!tit->next())
                     break;   
@@ -1178,6 +1206,7 @@ public:
                     //    visited.erase(visited.find(tit_dst->hash()));
                 }               
             
+            delete tit->look_ahead_loc_tmp;
             twa_prd_->release_iter(tit);
             
             if(found_plan)
