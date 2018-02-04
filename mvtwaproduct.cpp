@@ -467,13 +467,15 @@ namespace spot {
                     }
                     if ((*look_ahead_loc)[i + 1].size() > 1) {
                         float td = 0;
-                        int current = 0;
+                        int current = (*(*look_ahead_loc)[i + 1].begin());
                         int next = 0;
-                        for (std::vector<int>::iterator it = (*look_ahead_loc)[i + 1].begin(); it != (*look_ahead_loc)[i + 1].end(); ++it) {
-                            current = (*it);
-                            next = (*(++it));
+                        for (std::vector<int>::iterator it = ++(*look_ahead_loc)[i + 1].begin(); it != (*look_ahead_loc)[i + 1].end(); ++it) {
+                            //current = (*it);
+                            //next = (*(++it));
+                            next = (*it);
                             td = std::pow((*geo_locations)[current]->x_ - (*geo_locations)[next]->x_, 2);
                             td += std::pow((*geo_locations)[current]->y_ - (*geo_locations)[next]->y_, 2);
+                            current = next;
                             td = std::sqrt(td);
                             res.cost_h += td;
                         }
@@ -495,6 +497,7 @@ namespace spot {
                 do {
                     bdd r = right_->cond();
                     bdd current_cond = l & r;
+                    current_cond_ = current_cond;
                     if (current_cond != bddfalse) {
                         bool check = update_costs_after_next();
                         if(check)
@@ -559,6 +562,9 @@ namespace spot {
 
 
                     mrs->destroy();
+                    
+                    //return !itv_res.first->isFalse();
+                    
                     current_cond_ = bddtrue; //****************test: for printout purposes
                     if(itv_res.first->isFalse())
                         current_cond_ = bddfalse;
@@ -1023,10 +1029,12 @@ namespace spot {
             size_t start;
             std::map<int, std::vector<int>>*
                     look_aheads = new std::map<int, std::vector<int>>();
+            //>>>>>>>>>>>>>>>>>>>>>>>>>>>>
             (*look_aheads)[1].push_back(9);
             (*look_aheads)[1].push_back(1);
             (*look_aheads)[2].push_back(4);
             (*look_aheads)[2].push_back(12);
+            //<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             twa_prd_->look_ahead_loc_ = look_aheads;
             const spot::state * init_state = twa_prd_->get_init_state();
             std::pair<const spot::state*, float> item =
@@ -1060,6 +1068,9 @@ namespace spot {
                 twa_succ_iterator_product_kripke* tit =
                         down_cast<twa_succ_iterator_product_kripke*>
                         (twa_prd_->succ_iter(cs));
+                    
+                //cout <<"\n*> " << twa_prd_->format_state(cs) << endl;
+                //cout <<"--------------\n";
 
                 //tit->set_look_ahead_loc(node.look_ahead_loc_);
                 if (!tit->first()) {
@@ -1072,17 +1083,18 @@ namespace spot {
                     cout << "\n.\n";
                 while (!tit->done() && tit->cond() != bddfalse) {
                     const spot::state_product* tit_dst = tit->dst();
-                    //cout <<"-> " << twa_prd_->format_state(tit_dst) << endl;//twa_prd_->format_state(st) << endl;
+//                    cout <<"-> " << twa_prd_->format_state(tit_dst) << endl;//twa_prd_->format_state(st) << endl;
 
-//                    twa_succ_iterator_product_kripke* tmp =
-//                            down_cast<twa_succ_iterator_product_kripke*>
-//                            (twa_prd_->succ_iter(tit_dst));
-//                    if (!tmp->first() || tmp->cond() == bddfalse) {
-//                        tit->next();
-//                        twa_prd_->release_iter(tmp);
-//                        tit_dst->destroy();
-//                        continue;
-//                    }
+                    //EXTRA CHECK
+                    twa_succ_iterator_product_kripke* next_tit =
+                            down_cast<twa_succ_iterator_product_kripke*>
+                            (twa_prd_->succ_iter(tit_dst));
+                    if (!next_tit->first() || next_tit->cond() == bddfalse) {
+                        tit->next();
+                        twa_prd_->release_iter(next_tit);
+                        tit_dst->destroy();
+                        continue;
+                    }
 
 
                     if (twa_prd_->right_acc().accepting(tit->acc()) &&
@@ -1098,14 +1110,23 @@ namespace spot {
                         break;
                     }
                     //float cost_g = tit->dst_cost().cost_g + (tit->cost_sup()+tit->cost_sup())/2.0;
-                    float cost_g = NUM_CARS + (tit->cost_inf() + tit->cost_sup()) / 2.0;
-                    float cost_f1 = min_c + tit->dst_cost().cost_g + tit->dst_cost().cost_h + tit->cost_inf();
-                    float cost_f2 = min_c + tit->dst_cost().cost_g + tit->dst_cost().cost_h + tit->cost_sup();
-
+                    //float extra = tit->cost_inf();
+                    //if(tit->cost_inf() != tit->cost_sup);
+                    float max_dist = 2.0*std::sqrt(16+25);
+                    //float cost_g = NUM_CARS + (tit->cost_inf() + tit->cost_sup()) / 2.0;
+                    float cost_g = NUM_CARS + next_tit->cost_inf();
+                    float cost_f1 = min_c + next_tit->dst_cost().cost_g + next_tit->dst_cost().cost_h +  next_tit->cost_inf();
+                    float cost_f2 = min_c + next_tit->dst_cost().cost_g + next_tit->dst_cost().cost_h +  next_tit->cost_sup();
+                    //%%%%%%%% TEST ONLY
+                    //cost_f1 = min_c + NUM_CARS + tit->cost_inf();
+                    //cost_f2 = min_c + NUM_CARS + tit->cost_sup();
+                    
+                    //cout <<"-> " << twa_prd_->format_state(tit_dst) << " cost_f1: " << cost_f1 << " cost_g: " << cost_g << endl;
+                    
                     //cout <<"-> " << twa_prd_->format_state(tit_dst) << " cost_g: "<< tit->dst_cost().cost_g <<  " cost_h: "<< tit->dst_cost().cost_h << endl;
 
-                    if (visited.find(tit_dst->hash()) == visited.end()
-                            ) {
+                    if (visited.find(tit_dst->hash()) == visited.end() )
+                    {
                         todo_q->push(a_star_look_ahead_node(tit_dst->hash(), cs->hash(),
                                 cost_f1, cost_f2, 1));
                         total_cost_map[tit_dst->hash()] = min_c + cost_g;
@@ -1131,7 +1152,7 @@ namespace spot {
                         tit_dst->destroy();
                     }
 
-//                    twa_prd_->release_iter(tmp);
+                    twa_prd_->release_iter(next_tit);
 
                     if (!tit->next())
                         break;
@@ -1168,7 +1189,7 @@ namespace spot {
 
                 //auto end = chrono::steady_clock::now();
                 //cout << "time ms: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << endl;
-                if (todo_q->size() > MAX_Q_SIZE_) {
+                if (false && todo_q->size() > MAX_Q_SIZE_) {
                     //const state_product* s = down_cast<const state_product*>(reverse_state[todo_q->top().state_hash_]);
 
                     std::cout << "\nreverse size: " << reverse.size()
@@ -1724,7 +1745,7 @@ namespace spot {
 
     private:
         spot::twa_product_ptr twa_prd_;
-        int MAX_Q_SIZE_ = 20000; //50000;
+        int MAX_Q_SIZE_ = 50000; //50000;
         int NUM_CPY_FRM_Q_ = 10000; //10000;
         std::map<size_t, std::stack<size_t>> reverse_;
         float cycle_cost_;

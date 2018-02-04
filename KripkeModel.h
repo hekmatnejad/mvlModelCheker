@@ -20,7 +20,7 @@
 using namespace spot;
 
 const int NUM_CARS = 2;
-const bool COLLISION_AVOIDANCE = true;
+const bool COLLISION_AVOIDANCE = false;
 const std::string collision_symbol = "col_avo";
 static spot::bdd_dict_ptr shared_dict = spot::make_bdd_dict();
 static mvspot::mv_interval* shared_intervals = new mvspot::mv_interval("q");
@@ -88,12 +88,12 @@ const std::map<tuple_edge, std::map<int,std::list<symbol_stc>*>*>*
 class marine_robot_state : public spot::state {
 private:
     unsigned* state_num_;
-    unsigned* from_state_num_;
+    //unsigned* from_state_num_;
     spot::twa_graph_ptr org_model_;
     mvspot::mv_interval* q_interval_;
 public:
 
-    marine_robot_state(unsigned* state_num, unsigned* from_state_num, 
+    marine_robot_state(unsigned* state_num, //unsigned* from_state_num, 
             spot::twa_graph_ptr org_model, mvspot::mv_interval* q_interval);
 
     ~marine_robot_state();
@@ -119,10 +119,13 @@ private:
     spot::twa_graph_ptr org_model_;
     mvspot::mv_interval* intervals_;
     unsigned* state_num_;
+    size_t src_hash_;
 public:
 
+    size_t src_hash() const {return src_hash_;}
+    
     marine_robot_succ_iterator(unsigned* state_num, spot::twa_graph_ptr org_model, 
-            bdd cond, mvspot::mv_interval* intervals);
+            bdd cond, mvspot::mv_interval* intervals, size_t src_hash);
 
     ~marine_robot_succ_iterator();
     
@@ -135,7 +138,7 @@ public:
     marine_robot_state* dst() const override;
 
     void recycle(twa_succ_iterator* aut_succ[], spot::twa_graph_ptr org_model, bdd cond,
-            unsigned* state_num, mvspot::mv_interval* intervals);
+            unsigned* state_num, mvspot::mv_interval* intervals, size_t src_hash);
 };
 
 
