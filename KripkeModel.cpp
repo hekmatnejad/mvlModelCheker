@@ -71,7 +71,7 @@ extract_location_from_formula(formula f, std::map<int,std::list<symbol_stc>*>*&
         case op::ap:
             if(f.ap_name().find("_loc_") != std::string::npos){
                 int id = std::stoi(f.ap_name().substr(1,f.ap_name().find_first_of("_")-1));
-                cout << "ID: " << id << " " << f.ap_name() << endl;
+                //cout << "ID: " << id << " " << f.ap_name() << endl;
                 std::list<symbol_stc>* stc_list;
                 //if( (*list)[id] != 0)
                 if(id <= NUM_CARS)
@@ -108,7 +108,7 @@ extract_location_from_formula(formula f, std::map<int,std::list<symbol_stc>*>*&
         case op::Not:
             if(f[0].ap_name().find("_loc_") != std::string::npos){
                 int id = std::stoi(f[0].ap_name().substr(1,f[0].ap_name().find_first_of("_")-1));
-                cout << "ID: " << id << " " << f[0].ap_name() << endl;
+                //cout << "ID: " << id << " " << f[0].ap_name() << endl;
                 std::list<symbol_stc>* stc_list;
                 //if( (*list)[id] != 0)
                 if(id <= NUM_CARS)
@@ -195,7 +195,7 @@ compute_all_locations_of_graph_formula(const spot::const_twa_graph_ptr& aut) {
         //---------------------//
         //update intervals in formula join/meet
         
-        std::cout << spot::bdd_format_formula(shared_dict, srcit->cond()) << endl;
+        //std::cout << spot::bdd_format_formula(shared_dict, srcit->cond()) << endl;
         std::map<int,std::list<symbol_stc>*>* 
                 map_loc = new std::map<int,std::list<symbol_stc>*>();
         for(int i=0; i<NUM_CARS; i++){
@@ -214,8 +214,9 @@ compute_all_locations_of_graph_formula(const spot::const_twa_graph_ptr& aut) {
         //        << " cond " << spot::bdd_format_formula(shared_dict,srcit->cond()) << endl;
         //---------------------//
         
-        std::cout << aut->format_state(src) << "->"
-                << aut->format_state(dst) << '\n';
+        //std::cout << aut->format_state(src) << "->"
+        //        << aut->format_state(dst) << '\n';
+        
         // Advance the iterator, and maybe release it.
         if (!srcit->next()) {
             aut->release_iter(srcit);

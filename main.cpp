@@ -229,6 +229,10 @@ void model_4(string formula) {
     str_loc[1][1] = "C2_loc_12";
 //    str_loc[1][0] = "C2_loc_1";
 //    str_loc[1][1] = "C2_loc_2";
+//    str_loc[2] = new string[1];
+//    str_loc[2][0] = "C3_loc_0";
+//    str_loc[3] = new string[1];
+//    str_loc[3][0] = "C4_loc_0";
     }
     list<string>* lst_loc;
     lst_loc = new list<string>[NUM_CARS];
@@ -240,6 +244,8 @@ void model_4(string formula) {
     }
     for(int i=2; i<NUM_CARS; i++)
         lst_loc[i].push_back("");
+//    for(int i=2; i<NUM_CARS; i++)
+//        lst_loc[i].push_back(str_loc[i][0]);
     //****************//
     stringstream stream;
     stream << fixed << setprecision(2) << CERTAINTY_THREASHOLD;
@@ -252,13 +258,14 @@ void model_4(string formula) {
 //---------------------------------------------------------------
 
     formula = "G(\"q=[0.5,1]\") & F(C1_loc_1) & F(C1_loc_9) & ((!C1_loc_1) U C1_loc_9) "
-            " & G(!C1_loc_1 | !C1_loc_9) "
-            " & G(C1_loc_9 -> XG(\"q=[1,1]\"))";
+            " & G(!C1_loc_1 | !C1_loc_9) ";
+            //" & G(C1_loc_9 -> XG(\"q=[1,1]\"))";
             ////" & G(C1_loc_9 -> GF(\"q=[1,1]\"))";
     formula += " & F(C2_loc_4) & F(C2_loc_12) & ((!C2_loc_12) U C2_loc_4) "
             " & G(!C2_loc_4 | !C2_loc_12)"
             "";
 
+    //formula += " & FG C3_loc_0";// & FG C4_loc_0";
     //formula = "G(\"q=[0.5,1]\") &  F(C2_loc_4) & F(C2_loc_12) & ((!C2_loc_12) U C2_loc_4) "
     //        " & G(!C2_loc_4 | !C2_loc_12)"
     //        "";
@@ -290,17 +297,20 @@ void model_4(string formula) {
     //spot::formula f = spot::formula::Not(pf.f);
     spot::formula f = pf.f;
     spot::twa_graph_ptr af = spot::translator(shared_dict).run(f);
-    Util::write2File("new_formula_org.dot", af);
+    //Util::write2File("new_formula_org.dot", af);
+    
     //dfs_twa_graph(af,bddtrue);
     //cout <<".............\n";    
     //update intervals on the edges
     mvspot::interval_bdd::simplify_interval_formula_twa(af);
     
+    if(true){
     Util::write2File("new_formula.dot", af);
     af->merge_edges();
     af->merge_univ_dests();
     af->purge_dead_states();
     af->purge_unreachable_states();
+    }
     shared_formula_graph = af;//***********
     //dfs_twa_graph(af,bddtrue);
     
@@ -313,10 +323,12 @@ void model_4(string formula) {
     shared_intervals->add_interval("q=[0,0]",0,0);
     shared_intervals->add_interval("q=[0,1]",0,1);
 
+    if(false){
     cout << "\n\nusing TO Lattice:\n" << *shared_intervals->getTo_lattice_() << endl<<endl;
     for(std::pair<string,mvspot::mv_interval*> it : *shared_intervals->getMap_intervals()){
         
         cout << "interval: " << it.first << "\n" << *(it.second->getTo_lattice_()) << endl;
+    }
     }
 
     // Find a run of or marine_robot_kripke that intersects af.
@@ -327,19 +339,21 @@ void model_4(string formula) {
 
     //shared_model_kripke = static_cast<marine_robot_kripke*>(k);
     // Convert demo_kripke into an explicit graph
-    spot::twa_graph_ptr kg = spot::make_twa_graph(k, spot::twa::prop_set::all());
-    Util::write2File("merged_model.dot", kg);
+    //spot::twa_graph_ptr kg = spot::make_twa_graph(k, spot::twa::prop_set::all());
+    //Util::write2File("merged_model.dot", kg);
 
+    if(false){
     cout << "accepting condition <model>: " << k->acc() << " and formulas:\n";
     for(spot::formula f:  k->ap())
         cout << f <<endl;
-
+    }
     //spot::acc_cond acc = af->acc();
     //af->acc() = spot::acc_cond::fin(acc.all_sets());
-
+    if(false){
     cout << "accepting condition <formula>: " << af->acc()<< " and formulas:\n";
     for(spot::formula f:  af->ap())
         cout << f <<endl;
+    }
     //k->mv_intersecting_run(af);
     //if(true) return;
     //auto prd = spot::otf_product(k,af);//do not forget to disable clear_todo_queue
