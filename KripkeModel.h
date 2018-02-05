@@ -170,6 +170,10 @@ public:
 
     bdd state_condition(const spot::state* s) const override;
 
+    bdd state_condition_static(const spot::state* s) const ;
+    
+    bdd cond(const spot::state* s) const;
+
     std::string format_state(const spot::state* s) const override;
 
 };

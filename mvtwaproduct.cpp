@@ -519,15 +519,16 @@ namespace spot {
                 itv_res = mvspot::interval_bdd::apply_and(right_->cond(), left_->cond(), shared_dict);
                 //if (!itv_res.first->isFalse()) {
 
+                    const spot::state* dst_state = left_->dst();
                     const marine_robot_state* mrs =
-                            static_cast<const marine_robot_state*> (left_->dst());
+                            static_cast<const marine_robot_state*> (dst_state);
 
                     tuple_edge te(shared_formula_graph->edge_storage(right_).src,
                             shared_formula_graph->edge_storage(right_).dst,
                             spot::bdd_format_formula(shared_dict, right_->cond()));
 
                     dst_cost_ = find_dist_to_locs_graph(mrs->get_state_num(), te, look_ahead_loc_);
-
+                    //cout<< "::: " << (dst_cost_.cost_g + dst_cost_.cost_h) << endl;
                     std::map<int, std::vector<int>>* 
                             look_ahead_loc_tmp = new std::map<int, std::vector<int>>(*look_ahead_loc_);
 
@@ -561,11 +562,11 @@ namespace spot {
                     cost_sup_ = sup_;
 
 
-                    mrs->destroy();
-                    
+                    dst_state->destroy();
                     //return !itv_res.first->isFalse();
                     
-                    current_cond_ = bddtrue; //****************test: for printout purposes
+                    current_cond_ = left_->cond() & right_->cond();
+                    //current_cond_ = bddtrue; //****************test: for printout purposes
                     if(itv_res.first->isFalse())
                         current_cond_ = bddfalse;
                     else
@@ -939,15 +940,19 @@ namespace spot {
             //look_ahead_loc_ = node.look_ahead_loc_;
         }
 
+//        bool operator<(const a_star_look_ahead_node& rhs) const {
+//            if (state_hash_ < rhs.state_hash_ || (state_hash_ == rhs.state_hash_ &&
+//                    parent_hash_ < rhs.parent_hash_))
+//                return true;
+//            else if ((state_hash_ == rhs.state_hash_ && parent_hash_ == rhs.parent_hash_))
+//                if (base_cost_ < rhs.base_cost_)
+//                    return true;
+//            return false;
+//        }
         bool operator<(const a_star_look_ahead_node& rhs) const {
-            if (state_hash_ < rhs.state_hash_ || (state_hash_ == rhs.state_hash_ &&
-                    parent_hash_ < rhs.parent_hash_))
-                return true;
-            else if ((state_hash_ == rhs.state_hash_ && parent_hash_ == rhs.parent_hash_))
-                if (base_cost_ < rhs.base_cost_)
-                    return true;
-            return false;
+            return state_hash_ < rhs.state_hash_;
         }
+        
         size_t state_hash_;
         size_t parent_hash_;
         float primary_cost_;
@@ -1016,8 +1021,8 @@ namespace spot {
             std::priority_queue<a_star_look_ahead_node, std::vector<a_star_look_ahead_node>,
                     a_star_look_ahead_costcomparison>*
                     todo_q_cpy;
-            std::set<size_t>
-                    visited = std::set<size_t>();
+            std::unordered_set<size_t>
+                    visited = std::unordered_set<size_t>();
             std::map<size_t, std::stack < size_t>>
                     reverse = std::map<size_t, std::stack < size_t >> ();
             state_cost_map_ = std::map<size_t, float>();
@@ -1030,10 +1035,10 @@ namespace spot {
             std::map<int, std::vector<int>>*
                     look_aheads = new std::map<int, std::vector<int>>();
             //>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-            (*look_aheads)[1].push_back(9);
-            (*look_aheads)[1].push_back(1);
-            (*look_aheads)[2].push_back(4);
-            (*look_aheads)[2].push_back(12);
+//            (*look_aheads)[1].push_back(9);
+//            (*look_aheads)[1].push_back(1);
+//            (*look_aheads)[2].push_back(4);
+//            (*look_aheads)[2].push_back(12);
             //<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             twa_prd_->look_ahead_loc_ = look_aheads;
             const spot::state * init_state = twa_prd_->get_init_state();
@@ -1054,14 +1059,18 @@ namespace spot {
             const spot::state* cs; //current state
             float min_c = 0;
             float optimal_cost = -1;
-            int steps = 100;
+            int steps = 20;
             while (!todo_q->empty()) {
-                //if(!(steps--))
-                //    exit(0);
+                //if(!(steps--)){
+                    //for(std::set<size_t>::iterator it = visited.begin(); it!=visited.end(); ++it)
+                    //cout <<"\n==> " << twa_prd_->format_state(reverse_state[(*it)]) << " hash: " << (*it) <<endl;
+                    //exit(0);
+                //}
                 //auto start = chrono::steady_clock::now();
                 a_star_look_ahead_node node(todo_q->top());
                 todo_q->pop();
                 visited.insert(node.state_hash_);
+                //cout << "hash: " << node.state_hash_ << endl;
                 cs = reverse_state[node.state_hash_]; //do not need the state, hash is fine
                 min_c = total_cost_map[node.state_hash_]; //solid
 
@@ -1069,7 +1078,7 @@ namespace spot {
                         down_cast<twa_succ_iterator_product_kripke*>
                         (twa_prd_->succ_iter(cs));
                     
-                //cout <<"\n*> " << twa_prd_->format_state(cs) << endl;
+                //cout <<"\n*> " << twa_prd_->format_state(cs) << endl;//" hash: " << node.state_hash_ <<endl;
                 //cout <<"--------------\n";
 
                 //tit->set_look_ahead_loc(node.look_ahead_loc_);
@@ -1079,24 +1088,30 @@ namespace spot {
                     twa_prd_->release_iter(tit);
                     continue;
                 }
+                
+                
                 if (tit->cond() == bddfalse)
                     cout << "\n.\n";
+                
+                
                 while (!tit->done() && tit->cond() != bddfalse) {
                     const spot::state_product* tit_dst = tit->dst();
-//                    cout <<"-> " << twa_prd_->format_state(tit_dst) << endl;//twa_prd_->format_state(st) << endl;
-
+//                    cout <<"-> " << twa_prd_->format_state(tit_dst) << endl;
+                    //cout << "before "<<tit_dst->hash() <<"\n";
                     //EXTRA CHECK
                     twa_succ_iterator_product_kripke* next_tit =
                             down_cast<twa_succ_iterator_product_kripke*>
                             (twa_prd_->succ_iter(tit_dst));
                     if (!next_tit->first() || next_tit->cond() == bddfalse) {
-                        tit->next();
                         twa_prd_->release_iter(next_tit);
                         tit_dst->destroy();
-                        continue;
+                        if(tit->next())
+                            continue;
+                        break;
                     }
+                    //cout << "after  "<<tit_dst->hash() <<"\n";
 
-
+                    //##################################################
                     if (twa_prd_->right_acc().accepting(tit->acc()) &&
                             tit->cond() != bddfalse) {
                         cout << "cond: " << tit->acc() << endl;
@@ -1109,24 +1124,28 @@ namespace spot {
                         found_plan = true;
                         break;
                     }
+                    //##################################################
+
+
                     //float cost_g = tit->dst_cost().cost_g + (tit->cost_sup()+tit->cost_sup())/2.0;
                     //float extra = tit->cost_inf();
                     //if(tit->cost_inf() != tit->cost_sup);
-                    float max_dist = 2.0*std::sqrt(16+25);
                     //float cost_g = NUM_CARS + (tit->cost_inf() + tit->cost_sup()) / 2.0;
-                    float cost_g = NUM_CARS + next_tit->cost_inf();
-                    float cost_f1 = min_c + next_tit->dst_cost().cost_g + next_tit->dst_cost().cost_h +  next_tit->cost_inf();
-                    float cost_f2 = min_c + next_tit->dst_cost().cost_g + next_tit->dst_cost().cost_h +  next_tit->cost_sup();
+                    float cost_g = NUM_CARS + tit->cost_inf();
+                    float cost_f1 = NUM_CARS + min_c + tit->dst_cost().cost_g + tit->dst_cost().cost_h +  next_tit->cost_inf();
+                    float cost_f2 = NUM_CARS + min_c + tit->dst_cost().cost_g + tit->dst_cost().cost_h +  next_tit->cost_sup();
                     //%%%%%%%% TEST ONLY
                     //cost_f1 = min_c + NUM_CARS + tit->cost_inf();
                     //cost_f2 = min_c + NUM_CARS + tit->cost_sup();
                     
                     //cout <<"-> " << twa_prd_->format_state(tit_dst) << " cost_f1: " << cost_f1 << " cost_g: " << cost_g << endl;
+                    //cout <<"-> " <<" cost_f1: " << (tit->dst_cost().cost_g + tit->dst_cost().cost_h) << " cost_g: " << cost_g << endl;
                     
                     //cout <<"-> " << twa_prd_->format_state(tit_dst) << " cost_g: "<< tit->dst_cost().cost_g <<  " cost_h: "<< tit->dst_cost().cost_h << endl;
 
-                    if (visited.find(tit_dst->hash()) == visited.end() )
+                    if (reverse_state.find(tit_dst->hash()) == reverse_state.end() )
                     {
+                        //cout <<"**new: " << twa_prd_->format_state(tit_dst) << endl;
                         todo_q->push(a_star_look_ahead_node(tit_dst->hash(), cs->hash(),
                                 cost_f1, cost_f2, 1));
                         total_cost_map[tit_dst->hash()] = min_c + cost_g;
@@ -1136,11 +1155,11 @@ namespace spot {
                             reverse_state[tit_dst->hash()] = tit_dst;
                         //else
                         //    tit_dst->destroy();
-                    } else if (visited.find(tit_dst->hash()) != visited.end()
+                    } else if (reverse_state.find(tit_dst->hash()) != reverse_state.end()
                             &&
                             total_cost_map[tit_dst->hash()] > (min_c + cost_g)
                             ) {
-                        //cout << "+";
+                        //cout << "\n+\n";
                         total_cost_map[tit_dst->hash()] = min_c + cost_g;
                         state_cost_map_[tit_dst->hash()] = cost_g;
                         reverse[tit_dst->hash()].push(cs->hash());
@@ -1149,6 +1168,8 @@ namespace spot {
                         //else
                         tit_dst->destroy();
                     } else {
+                        //cout <<"\n!\n";
+                        //cout <<"rem: " << twa_prd_->format_state(tit_dst) << endl;
                         tit_dst->destroy();
                     }
 
@@ -1244,6 +1265,7 @@ namespace spot {
                 //cout << twa_prd_->format_state(reverse_state[st]) << endl;//twa_prd_->format_state(st) << endl;
                 while (!path.empty()) {
                     cout << twa_prd_->format_state(path.top()) << endl; //twa_prd_->format_state(st) << endl;
+                    //cout << state_cost_map_[path.top()->hash()] <<endl;
                     min_inf_cost += state_cost_map_[path.top()->hash()];
                     path.pop();
                 }

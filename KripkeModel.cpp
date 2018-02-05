@@ -557,7 +557,7 @@ std::map<size_t,unsigned*> from_sate_map = std::map<size_t,unsigned*>();
                     /*
                      ignore this state
                      */
-                    return bddfalse;
+                    //return bddfalse;
                     break;
                 }
             }
@@ -565,6 +565,8 @@ std::map<size_t,unsigned*> from_sate_map = std::map<size_t,unsigned*>();
                 break;
         }
         }
+        if(COLLISION_AVOIDANCE && res == bddtrue)
+            res &= col_avo_;
         //else{
         //    res &= col_avo_;
         //}
@@ -599,6 +601,51 @@ std::map<size_t,unsigned*> from_sate_map = std::map<size_t,unsigned*>();
         return res;// & (goal ? goal_ : !goal_) & (ss->is_certain() ? certainty_ : !certainty_);
     }
 
+    bdd marine_robot_kripke::state_condition_static(const spot::state* s) const {
+        //cout <<"in: state_condition\n";
+        auto ss = static_cast<const marine_robot_state*> (s);
+        bdd res = bddtrue;
+        //if(ss->get_state_num()[0]==18 && ss->get_state_num()[1]==6)
+        //    cout << "from: " << ss->get_from_state_num()[0] << 
+        //            " " << ss->get_from_state_num()[1] << endl;
+        //check collision avoidance
+        if(COLLISION_AVOIDANCE){
+            res &= col_avo_;
+        }
+
+
+        //spot::formula ff = spot::parse_formula("\"q="+ss->get_q_interval()->getName()+"\"");
+        spot::formula ff = spot::formula::ap("q="+ss->get_q_interval()->getName()+"");
+        //if(ss->get_q_interval()->getName().compare("[1,1]")!=0)
+        //cout << "-> " <<"q="+ss->get_q_interval()->getName() << endl;
+        //std::cout << "*** " << ff << " " << ss->get_state_num()[0] << " " << ss->get_state_num()[1] << " -> " << ss->get_q_interval()->getName() << "\n";
+        //formula_to_bdd(ff,shared_dict)
+        //spot::formula ff = org_model_->get_dict()->bdd_map[].f;
+        
+    //cout << "*** " << ss->get_q_interval()->getName() << " " << ff << " " << spot::formula_to_bdd(ff,shared_dict,nullptr) <<endl;
+        res &= spot::formula_to_bdd(ff,shared_dict,nullptr);
+        
+        list<string>* tmp_symbols;
+        map<string, bdd>* tmp_map;
+        tmp_symbols = get_lst_str_loc();
+        tmp_map = get_map_str_bdd_loc();
+        for (int i = 0; i < NUM_CARS; i++) {
+            string symbol = "C" + std::to_string(i + 1) + "_loc_" + std::to_string(ss->get_state_num()[i]);
+            for (std::list<string>::iterator it = tmp_symbols[i].begin(); it != tmp_symbols[i].end(); it++) {
+                if ((*it) == symbol) {
+                    res &= tmp_map[i][*it];
+                } else {
+                    res &= !(tmp_map[i][*it]);
+                }
+            }
+        }
+        //cout <<"out: state_condition\n";
+
+        //bool goal = true;
+        return res;// & (goal ? goal_ : !goal_) & (ss->is_certain() ? certainty_ : !certainty_);
+    }
+    
+    
     std::string marine_robot_kripke::format_state(const spot::state* s) const {
         auto ss = static_cast<const marine_robot_state*> (s);
         std::ostringstream out;
@@ -612,7 +659,7 @@ std::map<size_t,unsigned*> from_sate_map = std::map<size_t,unsigned*>();
         out << "(state_num = " << str_state
                 //<< ", is_certain = " << ss->is_certain() 
                 //<< ", t = " << ss->get_time() 
-                << ')' << bdd_to_formula(this->state_condition(s),dict_);
+                << ')' << bdd_to_formula(this->state_condition_static(s),dict_);
         return out.str();
     }
 
