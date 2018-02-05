@@ -463,6 +463,8 @@ namespace spot {
                         dist = std::pow((*geo_locations)[state_num[i]]->x_ - (*geo_locations)[f_loc]->x_, 2);
                         dist += std::pow((*geo_locations)[state_num[i]]->y_ - (*geo_locations)[f_loc]->y_, 2);
                         dist = std::sqrt(dist);
+                        //if(dist==0)
+                        //    dist =1;
                         res.cost_g += dist;
                     }
                     if ((*look_ahead_loc)[i + 1].size() > 1) {
@@ -514,6 +516,15 @@ namespace spot {
             }
 
             bool update_costs_after_next() {
+
+//                        for(std::vector<int>::iterator it = (*look_ahead_loc_)[1].begin(); it != (*look_ahead_loc_)[1].end(); ++it){
+//                            cout << (*it) << " "; 
+//                        }
+//                        cout << endl;
+//                        for(std::vector<int>::iterator it = (*look_ahead_loc_)[2].begin(); it != (*look_ahead_loc_)[2].end(); ++it){
+//                            cout << (*it) << " "; 
+//                        }
+//                        cout << endl;
                 
                 std::pair<mvspot::mv_interval*, bdd> itv_res;
                 itv_res = mvspot::interval_bdd::apply_and(right_->cond(), left_->cond(), shared_dict);
@@ -527,7 +538,7 @@ namespace spot {
                             shared_formula_graph->edge_storage(right_).dst,
                             spot::bdd_format_formula(shared_dict, right_->cond()));
 
-                    dst_cost_ = find_dist_to_locs_graph(mrs->get_state_num(), te, look_ahead_loc_);
+                //dst_cost_ = find_dist_to_locs_graph(mrs->get_state_num(), te, look_ahead_loc_);
                     //cout<< "::: " << (dst_cost_.cost_g + dst_cost_.cost_h) << endl;
                     std::map<int, std::vector<int>>* 
                             look_ahead_loc_tmp = new std::map<int, std::vector<int>>(*look_ahead_loc_);
@@ -553,7 +564,24 @@ namespace spot {
                         //cout << endl;
 
                     }
+//                    if(mrs->get_state_num()[0]==9 && mrs->get_state_num()[1]==17 && 
+//                    mrs->get_from_state_num()[0] ==9 && mrs->get_from_state_num()[1]==4
+//                    )
+//                    {
+//                        cout << "cost: " << dst_cost_.cost_g << " " << dst_cost_.cost_h << endl;
+//                        for(std::vector<int>::iterator it = (*look_ahead_loc_tmp)[1].begin(); it != (*look_ahead_loc_tmp)[1].end(); ++it){
+//                            cout << (*it) << " "; 
+//                        }
+//                        cout << endl;
+//                        for(std::vector<int>::iterator it = (*look_ahead_loc_tmp)[2].begin(); it != (*look_ahead_loc_tmp)[2].end(); ++it){
+//                            cout << (*it) << " "; 
+//                        }
+//                        cout << endl;
+//                    }
+                    
+                    dst_cost_ = find_dist_to_locs_graph(mrs->get_state_num(), te, look_ahead_loc_tmp);
 
+                    
                     look_stack.push(look_ahead_loc_tmp);
                     inf_ = 1 - itv_res.first->getButtom()->getValue();
                     sup_ = 1 - itv_res.first->getTop()->getValue();
@@ -1035,10 +1063,10 @@ namespace spot {
             std::map<int, std::vector<int>>*
                     look_aheads = new std::map<int, std::vector<int>>();
             //>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-//            (*look_aheads)[1].push_back(9);
-//            (*look_aheads)[1].push_back(1);
-//            (*look_aheads)[2].push_back(4);
-//            (*look_aheads)[2].push_back(12);
+            (*look_aheads)[1].push_back(9);
+            (*look_aheads)[1].push_back(1);
+            (*look_aheads)[2].push_back(4);
+            (*look_aheads)[2].push_back(12);
             //<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             twa_prd_->look_ahead_loc_ = look_aheads;
             const spot::state * init_state = twa_prd_->get_init_state();
@@ -1061,11 +1089,11 @@ namespace spot {
             float optimal_cost = -1;
             int steps = 20;
             while (!todo_q->empty()) {
-                //if(!(steps--)){
+                if(!(steps--)){
                     //for(std::set<size_t>::iterator it = visited.begin(); it!=visited.end(); ++it)
                     //cout <<"\n==> " << twa_prd_->format_state(reverse_state[(*it)]) << " hash: " << (*it) <<endl;
-                    //exit(0);
-                //}
+                //   exit(0);
+                }
                 //auto start = chrono::steady_clock::now();
                 a_star_look_ahead_node node(todo_q->top());
                 todo_q->pop();
@@ -1110,7 +1138,7 @@ namespace spot {
                         break;
                     }
                     //cout << "after  "<<tit_dst->hash() <<"\n";
-
+                    
                     //##################################################
                     if (twa_prd_->right_acc().accepting(tit->acc()) &&
                             tit->cond() != bddfalse) {
@@ -1120,7 +1148,11 @@ namespace spot {
                             reverse[target].push(cs->hash());
                             reverse_state[target] = tit_dst;
                         }
-                        optimal_cost = min_c;
+                        optimal_cost = min_c+NUM_CARS + tit->cost_inf();
+                        state_cost_map_[tit_dst->hash()] = NUM_CARS + tit->cost_inf();
+
+        //cout <<"-> " << twa_prd_->format_state(tit_dst) << " cost_g: "<< tit->dst_cost().cost_g <<  " cost_h: "<< tit->dst_cost().cost_h << endl;
+                        
                         found_plan = true;
                         break;
                     }
@@ -1173,6 +1205,7 @@ namespace spot {
                         tit_dst->destroy();
                     }
 
+                    next_tit->release_memory();
                     twa_prd_->release_iter(next_tit);
 
                     if (!tit->next())
@@ -1240,7 +1273,8 @@ namespace spot {
             if (found_plan) {
                 std::cout << "\nFOUND AN OPTIMAL PLAN ****\n" << "reverse size: " << reverse.size()
                         << " todo_q size: " << todo_q->size()
-                        << " visited size: " << visited.size() << endl;
+                        //<< " visited size: " << visited.size() 
+                        << endl;
 
                 std::stack<const spot::state*> path = std::stack<const spot::state*> ();
                 size_t st = target;
@@ -1265,7 +1299,7 @@ namespace spot {
                 //cout << twa_prd_->format_state(reverse_state[st]) << endl;//twa_prd_->format_state(st) << endl;
                 while (!path.empty()) {
                     cout << twa_prd_->format_state(path.top()) << endl; //twa_prd_->format_state(st) << endl;
-                    //cout << state_cost_map_[path.top()->hash()] <<endl;
+                    cout << state_cost_map_[path.top()->hash()] <<endl;
                     min_inf_cost += state_cost_map_[path.top()->hash()];
                     path.pop();
                 }
