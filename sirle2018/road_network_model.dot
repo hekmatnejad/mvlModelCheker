@@ -1,0 +1,49 @@
+HOA: v1
+States: 20
+Start: 5
+AP: 6 "q=[1,1]" "q=[0.5,1]" "q=[0.5,0.5]" "q=[0,0.5]" "q=[0,0]" "goal"
+acc-name: all
+Acceptance:  0 t
+properties: 
+--BODY--
+State: [0] 0 "s0"
+0 1 11
+State: [0] 1 "s1"
+1 0 2
+State: [0] 2 "s2"
+2 1 3
+State: [0] 3 "s3-l"
+3 4 17
+State: [0] 4 "s4"
+4 16 17
+State: [0] 5 "s5"
+5 2 6
+State: [0] 6 "s6"
+6 5 7 18 19
+State: [0] 7 "s7"
+7 6 8
+State: [0] 8 "s8"
+8 7 9 10
+State: [0] 9 "s9"
+9 8
+State: [0] 10 "s10"
+10 8
+State: [0] 11 "s11"
+11 0 12
+State: [0] 12 "s12"
+12 11 13
+State: [0] 13 "s13-l"
+13 6 18
+State: [4] 14 "s14-r"
+14 6 19
+State: [0] 15 "s15"
+15 14 16
+State: [0] 16 "s16"
+16 4 15
+State: [1] 17 "s3-r"
+17 2 4
+State: [1] 18 "s13-r"
+18 6 12
+State: [4] 19 "s14-l"
+19 6 15
+--END--

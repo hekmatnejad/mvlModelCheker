@@ -7,7 +7,7 @@ orig
 .*
 !.gitignore
 *.jpeg
-*.dot
+#*.dot
 MvLtlProject
 *.sh
 

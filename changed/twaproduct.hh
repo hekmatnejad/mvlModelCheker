@@ -49,6 +49,15 @@ namespace spot
     {
     }
 
+    state_product(const state* left,
+                  const state* right, 
+                  std::map<int,std::vector<int>>* look_ahead_loc,
+                  fixed_size_pool* pool)
+      :        left_(left), right_(right), count_(1), pool_(pool)
+    {
+        look_ahead_loc_ = look_ahead_loc;
+    }      
+      
     virtual void destroy() const override;
 
     const state*
@@ -67,6 +76,7 @@ namespace spot
     virtual int compare(const state* other) const override;
     virtual size_t hash() const override;
     virtual state_product* clone() const override;
+    std::map<int,std::vector<int>>* look_ahead_loc_;
 
   private:
     const state* left_;                ///< State from the left automaton.
@@ -103,6 +113,7 @@ namespace spot
 
     const acc_cond& left_acc() const;
     const acc_cond& right_acc() const;
+    std::map<int,std::vector<int>>* look_ahead_loc_;
 
   protected:
     const_twa_ptr left_;
