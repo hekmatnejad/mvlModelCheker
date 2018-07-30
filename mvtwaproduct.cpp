@@ -1068,8 +1068,10 @@ namespace spot {
             (*look_aheads)[2].push_back(4);
             (*look_aheads)[2].push_back(12);
             
-            //(*look_aheads)[3].push_back(0);
-            //(*look_aheads)[4].push_back(0);
+            (*look_aheads)[3].push_back(5);
+            //(*look_aheads)[3].push_back(5);
+            (*look_aheads)[4].push_back(0);
+            (*look_aheads)[4].push_back(0);
             //<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             twa_prd_->look_ahead_loc_ = look_aheads;
             const spot::state * init_state = twa_prd_->get_init_state();

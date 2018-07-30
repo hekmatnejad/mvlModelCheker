@@ -41,7 +41,7 @@ using namespace std;
 
 #define PRINT_DEBUG_DATA 1
 float CERTAINTY_THREASHOLD = 1;
-
+string benchmark_name = "benchmark_model_4_4";
 void model_4(string formula);
 void dfs_twa_graph(spot::const_twa_graph_ptr aut, bdd query);
 void dfs_twa(spot::const_twa_ptr aut);
@@ -68,9 +68,8 @@ int main(int argc, char** argv) {
 
     mvspot::test_intervals();
     test();
-    ifstream inFile;
-    //string model_filename = "sirle2018/road_network_model_test.dot";
     string model_filename = "sirle2018/road_network_model.dot";
+    //string model_filename = "benchmark/road_network_model.dot";
     srand(time(NULL));
     read_model_aut = Util::readAutFromFile(model_filename, false, shared_dict);
     if (!read_model_aut || read_model_aut->errors.size() > 0) {
@@ -78,7 +77,7 @@ int main(int argc, char** argv) {
         exit(0);
     } else {
         cout << "model loaded from: " << model_filename << endl;
-        Util::write2File("sirle2018/road_network_graph.dot", read_model_aut->aut, "k");
+        Util::write2File("benchmark/road_network_graph.dot", read_model_aut->aut, "k");
 
     }
     kg_model = read_model_aut->ks;
@@ -263,6 +262,7 @@ void model_4(string formula) {
             ////" & G(C1_loc_9 -> GF(\"q=[1,1]\"))";
     formula += " & F(C2_loc_4) & F(C2_loc_12) & ((!C2_loc_12) U C2_loc_4) "
             " & G(!C2_loc_4 | !C2_loc_12)"
+            //" & G(C2_loc_4 -> XG(\"q=[1,1]\"))";
             "";
 
     //formula += " & FG C3_loc_0";// & FG C4_loc_0";
